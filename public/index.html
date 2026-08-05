@@ -408,6 +408,7 @@
     </div>
     <div class="upload-fields">
       <b>Kolom yang dibutuhkan:</b> Shipment ID, Station Name, Zone ID/Name, Order Account, Inbound Time, LM Hub Aging, LM Hub Days, Delivery Attempts, No. Attempts, Latest Status, Latest Operation Time, Latest User Name, Destination Station.
+      <br><br><b>Catatan:</b> Paket dengan Latest Status <b>Delivering</b> atau <b>On Hold</b> otomatis dikeluarkan dari data, karena status itu sudah dipegang kurir dan tidak dihitung sebagai backlog hub.
     </div>
   </div>
 </div>
@@ -601,7 +602,7 @@ function handleFile(file){
       const json = XLSX.utils.sheet_to_json(sheet, {defval:''});
       const parsed = parseRows(json);
       if(parsed.length === 0){
-        showError('File terbaca tapi tidak ada baris data yang valid. Cek kembali format kolom.');
+        showError('File terbaca tapi tidak ada baris data yang valid (atau semua baris berstatus Delivering/On Hold). Cek kembali format kolom.');
         return;
       }
       parsedButUnsaved = parsed;
@@ -609,7 +610,9 @@ function handleFile(file){
       records = parsed;
       document.getElementById('emptyState').style.display='none';
       document.getElementById('dashboard').style.display='block';
-      successText.textContent = `File "${file.name}" berhasil dibaca — ${parsed.length} resi ditemukan. Masukkan password admin lalu simpan ke server supaya semua user melihat data ini.`;
+      const excludedCount = json.length - parsed.length;
+      const excludedNote = excludedCount > 0 ? ` (${excludedCount} paket Delivering/On Hold dikeluarkan otomatis dari backlog)` : '';
+      successText.textContent = `File "${file.name}" berhasil dibaca — ${parsed.length} resi backlog ditemukan${excludedNote}. Masukkan password admin lalu simpan ke server supaya semua user melihat data ini.`;
       successBox.style.display='block';
       saveSection.style.display='block';
       saveStatus.textContent='';
@@ -771,6 +774,14 @@ function fmtDate(d){
   return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Status yang TIDAK dihitung sebagai backlog karena paketnya sudah di tangan kurir
+// (statusnya berubah terus di lapangan, jadi bukan "stuck" di hub).
+const EXCLUDED_STATUSES = ['delivering', 'on hold', 'onhold'];
+function isExcludedStatus(status){
+  const norm = String(status||'').trim().toLowerCase().replace(/[_\-]+/g,' ').replace(/\s+/g,' ').trim();
+  return EXCLUDED_STATUSES.includes(norm);
+}
+
 function parseRows(json){
   if(json.length === 0) return [];
   const sample = json[0];
@@ -793,6 +804,8 @@ function parseRows(json){
   json.forEach(row=>{
     const shipmentId = kShipment ? String(row[kShipment]).trim() : '';
     if(!shipmentId) return;
+    const statusRaw = kStatus ? String(row[kStatus]||'-').trim() : '-';
+    if(isExcludedStatus(statusRaw)) return; // bukan backlog, sudah dibawa kurir
     const days = kDays ? parseFloat(row[kDays]) : NaN;
     const user = parseUser(kUser ? row[kUser] : '');
     const inboundDate = kInbound ? toDateSafe(row[kInbound]) : null;
@@ -808,7 +821,7 @@ function parseRows(json){
       lmHubDays: isNaN(days) ? 0 : days,
       attemptsText: kAttemptsText ? String(row[kAttemptsText]||'-').trim() : '-',
       attemptsNum: kAttemptsNum ? (parseInt(row[kAttemptsNum]) || 0) : 0,
-      latestStatus: kStatus ? String(row[kStatus]||'-').trim() : '-',
+      latestStatus: statusRaw,
       latestOpTime: opDate,
       userRaw: kUser ? String(row[kUser]||'') : '',
       userName: user.name,
