@@ -333,9 +333,8 @@
   </div>
   <div class="topbar-right" id="topbarRight" style="display:none;">
     <span class="admin-badge">Admin Mode</span>
-    <div class="file-chip" id="fileChipWrap" style="display:none;"><span class="dot"></span><span class="fname" id="fileNameChip">-</span></div>
+    <span class="file-chip" id="fileChipWrap" style="display:none;"><span class="dot"></span><span class="fname" id="fileNameChip">-</span></span>
     <button class="btn btn-ghost" id="refreshBtn">Update Data</button>
-    <button class="btn btn-light" id="downloadHtmlBtn" style="display:none;">⬇ Download HTML Final</button>
   </div>
 </div>
 
@@ -356,14 +355,19 @@
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0-12l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <h2>Upload / Update File Export FMS</h2>
-    <p>Drag &amp; drop file <b>.xlsx</b> hasil export dari FMS, atau klik tombol di bawah untuk memperbarui data dashboard.</p>
+    <p>Drag &amp; drop file <b>.xlsx</b> hasil export dari FMS, atau klik tombol di bawah.</p>
     <button class="upload-btn" id="browseBtn">Pilih File .xlsx</button>
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
-    <div class="upload-hint">Data diproses 100% di browser kamu — tidak diunggah ke server manapun.</div>
+    <div class="upload-hint">File diproses di browser, lalu datanya dikirim ke server supaya semua user bisa lihat.</div>
     <div class="err-box" id="errBox"></div>
     <div class="success-box" id="successBox">
-      Data berhasil dimuat. Klik tombol di bawah untuk mengunduh file HTML final berisi data ini, lalu upload file tersebut ke hosting kamu supaya user melihat data terbaru.
-      <br><button class="upload-btn" id="downloadHtmlBtnModal" style="margin-top:10px;">⬇ Download HTML Final</button>
+      <span id="successText">Data berhasil dimuat dari file.</span>
+    </div>
+    <div id="saveSection" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--line);text-align:left;">
+      <label style="font-size:11.5px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:6px;">Password Admin</label>
+      <input type="password" id="adminPassword" class="toolbar-input" style="width:100%;" placeholder="Masukkan password admin">
+      <button class="upload-btn" id="saveServerBtn" style="margin-top:12px;width:100%;">💾 Simpan ke Server</button>
+      <div id="saveStatus" style="font-size:12px;margin-top:8px;"></div>
     </div>
     <div class="upload-fields">
       <b>Kolom yang dibutuhkan:</b> Shipment ID, Station Name, Zone ID/Name, Order Account, Inbound Time, LM Hub Aging, LM Hub Days, Delivery Attempts, No. Attempts, Latest Status, Latest Operation Time, Latest User Name, Destination Station.
@@ -371,12 +375,10 @@
   </div>
 </div>
 
-<!-- EMBEDDED DATA: diisi otomatis saat admin klik "Download HTML Final" -->
-<script id="embedded-data" type="application/json">[]</script>
-
 <!-- DASHBOARD -->
 <div id="dashboard">
   <div class="container">
+
 
     <div class="section-title"><h2>Ringkasan Backlog</h2><span class="sub">Overview stuck order saat ini</span></div>
     <div class="kpi-grid" id="kpiGrid"></div>
@@ -491,7 +493,7 @@
       </div>
     </div>
 
-    <footer>SPX Backlog Monitoring Dashboard · Data diproses lokal di browser · Update file kapan saja lewat tombol "Ganti File"</footer>
+    <footer>SPX Backlog Monitoring Dashboard · Data terakhir diperbarui: <span id="lastUpdatedFooter">-</span></footer>
   </div>
 </div>
 
@@ -501,6 +503,7 @@ let sortState = { main: {key:'lmHubDays', dir:'desc'}, sla: {key:'lmHubDays', di
 
 const SLA_LIMIT = 10;
 const isAdmin = new URLSearchParams(location.search).has('admin');
+let lastUpdatedAt = null;
 
 // ---------- Upload / modal handling ----------
 const uploadCard = document.getElementById('uploadCard');
@@ -508,11 +511,17 @@ const fileInput = document.getElementById('fileInput');
 const browseBtn = document.getElementById('browseBtn');
 const errBox = document.getElementById('errBox');
 const successBox = document.getElementById('successBox');
+const successText = document.getElementById('successText');
 const refreshBtn = document.getElementById('refreshBtn');
 const adminModal = document.getElementById('adminModal');
 const modalCloseBtn = document.getElementById('modalCloseBtn');
-const downloadHtmlBtn = document.getElementById('downloadHtmlBtn');
-const downloadHtmlBtnModal = document.getElementById('downloadHtmlBtnModal');
+const saveSection = document.getElementById('saveSection');
+const saveServerBtn = document.getElementById('saveServerBtn');
+const saveStatus = document.getElementById('saveStatus');
+const adminPasswordInput = document.getElementById('adminPassword');
+
+let parsedButUnsaved = null; // records parsed from file, waiting to be saved to server
+let currentFileName = null;
 
 browseBtn.addEventListener('click', ()=>fileInput.click());
 fileInput.addEventListener('change', e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
@@ -534,17 +543,18 @@ function closeAdminModal(){ adminModal.classList.remove('show'); }
 refreshBtn.addEventListener('click', openAdminModal);
 modalCloseBtn.addEventListener('click', closeAdminModal);
 adminModal.addEventListener('click', e=>{ if(e.target === adminModal) closeAdminModal(); });
-downloadHtmlBtn.addEventListener('click', downloadUpdatedHTML);
-downloadHtmlBtnModal.addEventListener('click', downloadUpdatedHTML);
+saveServerBtn.addEventListener('click', saveToServer);
 
 function showError(msg){
   errBox.textContent = msg;
   errBox.style.display='block';
   successBox.style.display='none';
+  saveSection.style.display='none';
 }
 
 function handleFile(file){
   errBox.style.display='none';
+  saveStatus.textContent='';
   const reader = new FileReader();
   reader.onload = (e)=>{
     try{
@@ -557,13 +567,15 @@ function handleFile(file){
         showError('File terbaca tapi tidak ada baris data yang valid. Cek kembali format kolom.');
         return;
       }
+      parsedButUnsaved = parsed;
+      currentFileName = file.name;
       records = parsed;
-      document.getElementById('fileNameChip').textContent = file.name;
-      document.getElementById('fileChipWrap').style.display='flex';
       document.getElementById('emptyState').style.display='none';
       document.getElementById('dashboard').style.display='block';
-      downloadHtmlBtn.style.display='inline-block';
+      successText.textContent = `File "${file.name}" berhasil dibaca — ${parsed.length} resi ditemukan. Masukkan password admin lalu simpan ke server supaya semua user melihat data ini.`;
       successBox.style.display='block';
+      saveSection.style.display='block';
+      saveStatus.textContent='';
       buildDashboard();
     }catch(err){
       console.error(err);
@@ -574,7 +586,7 @@ function handleFile(file){
   reader.readAsArrayBuffer(file);
 }
 
-// ---------- Embedded data (publish workflow) ----------
+// ---------- Server sync ----------
 function recordsToEmbeddable(recs){
   return recs.map(r=>({
     ...r,
@@ -590,47 +602,97 @@ function embeddableToRecords(arr){
   }));
 }
 
-function updateEmbeddedDataScript(){
-  const tag = document.getElementById('embedded-data');
-  tag.textContent = JSON.stringify(recordsToEmbeddable(records));
+async function saveToServer(){
+  if(!parsedButUnsaved){
+    saveStatus.style.color = 'var(--red)';
+    saveStatus.textContent = 'Belum ada file yang diupload.';
+    return;
+  }
+  const password = adminPasswordInput.value;
+  if(!password){
+    saveStatus.style.color = 'var(--red)';
+    saveStatus.textContent = 'Isi password admin dulu.';
+    return;
+  }
+  saveServerBtn.disabled = true;
+  saveServerBtn.textContent = 'Menyimpan...';
+  saveStatus.style.color = 'var(--ink-soft)';
+  saveStatus.textContent = 'Mengirim data ke server...';
+  try{
+    const res = await fetch('/api/upload', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        password,
+        fileName: currentFileName,
+        records: recordsToEmbeddable(parsedButUnsaved),
+      })
+    });
+    const json = await res.json();
+    if(!res.ok){
+      saveStatus.style.color = 'var(--red)';
+      saveStatus.textContent = json.error || 'Gagal menyimpan data.';
+      return;
+    }
+    saveStatus.style.color = 'var(--green)';
+    saveStatus.textContent = `Tersimpan! ${json.count} resi sekarang tampil untuk semua user.`;
+    lastUpdatedAt = json.updatedAt;
+    updateLastUpdatedFooter();
+    updateFileChip(currentFileName, json.updatedAt);
+    setTimeout(()=>{ closeAdminModal(); }, 1800);
+  }catch(err){
+    console.error(err);
+    saveStatus.style.color = 'var(--red)';
+    saveStatus.textContent = 'Gagal terhubung ke server. Cek koneksi lalu coba lagi.';
+  }finally{
+    saveServerBtn.disabled = false;
+    saveServerBtn.textContent = '💾 Simpan ke Server';
+  }
 }
 
-function downloadUpdatedHTML(){
-  updateEmbeddedDataScript();
-  const htmlStr = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-  const blob = new Blob([htmlStr], {type:'text/html'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'spx_backlog_dashboard.html';
-  a.click();
-  URL.revokeObjectURL(url);
+function updateLastUpdatedFooter(){
+  const el = document.getElementById('lastUpdatedFooter');
+  if(!el) return;
+  el.textContent = lastUpdatedAt ? fmtDate(new Date(lastUpdatedAt)) : '-';
 }
 
-function initFromEmbeddedData(){
-  const tag = document.getElementById('embedded-data');
-  let arr = [];
-  try{ arr = JSON.parse(tag.textContent || '[]'); }catch(e){ arr = []; }
+function updateFileChip(fileName, updatedAt){
+  if(!isAdmin) return;
+  document.getElementById('fileNameChip').textContent = (fileName || 'data') + (updatedAt ? ' · ' + fmtDate(new Date(updatedAt)) : '');
+  document.getElementById('fileChipWrap').style.display='flex';
+}
 
+async function loadDataFromServer(){
   if(isAdmin){
     document.getElementById('topbarRight').style.display='flex';
   }
-
-  if(arr.length > 0){
-    records = embeddableToRecords(arr);
-    document.getElementById('dashboard').style.display='block';
-    if(isAdmin) downloadHtmlBtn.style.display='inline-block';
-    buildDashboard();
-  } else {
-    document.getElementById('dashboard').style.display='none';
-    if(isAdmin){
-      openAdminModal();
+  try{
+    const res = await fetch('/api/data');
+    const json = await res.json();
+    const arr = json.records || [];
+    lastUpdatedAt = json.updatedAt || null;
+    updateLastUpdatedFooter();
+    if(arr.length > 0){
+      records = embeddableToRecords(arr);
+      document.getElementById('dashboard').style.display='block';
+      updateFileChip(json.fileName, json.updatedAt);
+      buildDashboard();
     } else {
-      document.getElementById('emptyState').style.display='flex';
+      document.getElementById('dashboard').style.display='none';
+      if(isAdmin){
+        openAdminModal();
+      } else {
+        document.getElementById('emptyState').style.display='flex';
+      }
     }
+  }catch(err){
+    console.error(err);
+    document.getElementById('dashboard').style.display='none';
+    if(isAdmin) openAdminModal();
+    else document.getElementById('emptyState').style.display='flex';
   }
 }
-initFromEmbeddedData();
+loadDataFromServer();
 
 // ---------- Parsing ----------
 function findKey(row, candidates){
