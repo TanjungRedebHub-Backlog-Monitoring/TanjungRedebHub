@@ -197,7 +197,7 @@
 
   /* KPI cards */
   .kpi-grid{
-    display:grid;grid-template-columns:repeat(5,1fr);gap:14px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;
   }
   .kpi{
     background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
@@ -211,12 +211,28 @@
   .kpi.accent .foot{color:rgba(255,255,255,0.75);}
   .kpi.warn{border-color:#f4c6bd;}
   .kpi.warn .value{color:var(--red);}
+  .kpi.caution{border-color:#f0dba8;}
+  .kpi.caution .value{color:var(--amber);}
   .kpi-icon{
     position:absolute;right:14px;top:14px;width:30px;height:30px;border-radius:9px;
     display:flex;align-items:center;justify-content:center;background:var(--orange-50);color:var(--orange-600);
   }
   .kpi.accent .kpi-icon{background:rgba(255,255,255,0.18);color:#fff;}
   .kpi.warn .kpi-icon{background:var(--red-bg);color:var(--red);}
+  .kpi.caution .kpi-icon{background:var(--amber-bg);color:var(--amber);}
+  .kpi.clickable{cursor:pointer;transition:transform .15s ease, box-shadow .15s ease;}
+  .kpi.clickable:hover{transform:translateY(-3px);box-shadow:0 16px 32px -14px rgba(36,26,21,0.28);}
+  .kpi.clickable:focus-visible{outline:2px solid var(--orange-500);outline-offset:2px;}
+  .kpi-cta{font-size:10.8px;font-weight:700;margin-top:10px;color:var(--orange-600);display:flex;align-items:center;gap:4px;}
+  .kpi.accent .kpi-cta{color:#fff;}
+  .kpi.warn .kpi-cta{color:var(--red);}
+  .kpi.caution .kpi-cta{color:var(--amber);}
+
+  @keyframes flashHighlight{
+    0%{box-shadow:0 0 0 0 rgba(238,77,31,0.35);}
+    100%{box-shadow:0 0 0 16px rgba(238,77,31,0);}
+  }
+  .flash-highlight{animation:flashHighlight 0.9s ease-out 2;border-radius:16px;}
 
   /* Panels layout */
   .panel-row{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:stretch;}
@@ -342,7 +358,6 @@
   footer{text-align:center;padding:30px 20px;color:var(--ink-faint);font-size:11.5px;}
 
   @media(max-width:1100px){
-    .kpi-grid{grid-template-columns:repeat(2,1fr);}
     .panel-row{grid-template-columns:1fr;}
   }
   @media(max-width:680px){
@@ -457,29 +472,63 @@
       </div>
     </div>
 
-    <div class="section-title"><h2>⚠ SLA Warning — Wajib End State</h2><span class="sub">Paket dengan umur &gt; 10 hari</span></div>
-    <div class="panel" style="padding-bottom:8px;">
-      <div class="table-toolbar">
-        <input class="toolbar-input" id="slaSearch" placeholder="Cari Shipment ID / User...">
-        <div class="toolbar-spacer"></div>
-        <span class="count-pill" id="slaCountPill">0 resi</span>
+    <div id="sectionSla">
+      <div class="section-title"><h2>⚠ SLA Warning — Wajib End State</h2><span class="sub">Paket dengan umur &gt; 10 hari</span></div>
+      <div class="panel" style="padding-bottom:8px;">
+        <div class="table-toolbar">
+          <input class="toolbar-input" id="slaSearch" placeholder="Cari Shipment ID / User...">
+          <div class="toolbar-spacer"></div>
+          <span class="count-pill" id="slaCountPill">0 resi</span>
+        </div>
+        <div class="scroll-table">
+          <table>
+            <thead>
+              <tr>
+                <th data-key="shipmentId">Shipment ID</th>
+                <th data-key="zoneName">Zone</th>
+                <th data-key="lmHubDays">Umur (Hari)</th>
+                <th data-key="latestStatus">Latest Status</th>
+                <th data-key="attemptsNum">Attempts</th>
+                <th data-key="userName">Last User</th>
+                <th data-key="latestOpTime">Operasi Terakhir</th>
+                <th>Rekomendasi</th>
+              </tr>
+            </thead>
+            <tbody id="slaTableBody"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="scroll-table">
-        <table>
-          <thead>
-            <tr>
-              <th data-key="shipmentId">Shipment ID</th>
-              <th data-key="zoneName">Zone</th>
-              <th data-key="lmHubDays">Umur (Hari)</th>
-              <th data-key="latestStatus">Latest Status</th>
-              <th data-key="attemptsNum">Attempts</th>
-              <th data-key="userName">Last User</th>
-              <th data-key="latestOpTime">Operasi Terakhir</th>
-              <th>Rekomendasi</th>
-            </tr>
-          </thead>
-          <tbody id="slaTableBody"></tbody>
-        </table>
+    </div>
+
+    <div id="sectionTransported">
+      <div class="section-title"><h2>🚚 Paket "Transported" — Perlu Verifikasi Land Haul</h2><span class="sub">Rawan cuma tercatat di sistem, fisiknya belum tentu sudah diterima</span></div>
+      <div class="panel" style="padding-bottom:8px;">
+        <div style="font-size:12px;line-height:1.6;color:var(--ink-soft);background:var(--amber-bg);border:1px solid #f0dba8;padding:12px 14px;border-radius:10px;margin-bottom:14px;">
+          ⚠️ Status <b>Transported</b> artinya sistem sudah mencatat paket dibongkar dari Land Haul. Tapi ini tricky — bisa jadi datanya cuma masuk ke shipment, padahal secara aktual paket belum di-<b>scan receive</b> / belum benar-benar tiba dari station asal. Perlu dicek ulang manual ke tim Land Haul / gudang sebelum dianggap benar-benar sudah in-hub.
+        </div>
+        <div class="table-toolbar">
+          <input class="toolbar-input" id="transportedSearch" placeholder="Cari Shipment ID / User...">
+          <div class="toolbar-spacer"></div>
+          <span class="count-pill" id="transportedCountPill">0 resi</span>
+        </div>
+        <div class="scroll-table">
+          <table>
+            <thead>
+              <tr>
+                <th data-key="shipmentId">Shipment ID</th>
+                <th data-key="stationName">Station</th>
+                <th data-key="zoneName">Zone</th>
+                <th data-key="inboundTime">Inbound Time</th>
+                <th data-key="lmHubDays">Umur (Hari)</th>
+                <th data-key="attemptsNum">Attempts</th>
+                <th data-key="userName">Last User</th>
+                <th data-key="latestOpTime">Operasi Terakhir</th>
+                <th data-key="destStation">Destination</th>
+              </tr>
+            </thead>
+            <tbody id="transportedTableBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -493,41 +542,43 @@
       <div id="userCardList"></div>
     </div>
 
-    <div class="section-title"><h2>Seluruh Data Backlog</h2><span class="sub">Tabel lengkap dengan filter mendalam</span></div>
-    <div class="panel">
-      <div class="table-toolbar">
-        <input class="toolbar-input" id="mainSearch" placeholder="Cari Shipment ID / User / Zone...">
-        <select class="toolbar-select" id="filterStatus"><option value="">Semua Status</option></select>
-        <select class="toolbar-select" id="filterZone"><option value="">Semua Zone</option></select>
-        <select class="toolbar-select" id="filterDay">
-          <option value="">Semua Umur</option>
-          <option value="1-5">1–5 hari</option>
-          <option value="6-10">6–10 hari</option>
-          <option value="10+">&gt;10 hari (SLA)</option>
-        </select>
-        <div class="toolbar-spacer"></div>
-        <span class="count-pill" id="mainCountPill">0 resi</span>
-        <button class="btn btn-outline" id="exportBtn">Export CSV</button>
-      </div>
-      <div class="scroll-table">
-        <table>
-          <thead>
-            <tr>
-              <th data-key="shipmentId">Shipment ID</th>
-              <th data-key="stationName">Station</th>
-              <th data-key="zoneName">Zone</th>
-              <th data-key="orderAccount">Account</th>
-              <th data-key="inboundTime">Inbound Time</th>
-              <th data-key="lmHubDays">Umur (Hari)</th>
-              <th data-key="attemptsNum">Attempts</th>
-              <th data-key="latestStatus">Latest Status</th>
-              <th data-key="latestOpTime">Operasi Terakhir</th>
-              <th data-key="userName">Last User</th>
-              <th data-key="destStation">Destination</th>
-            </tr>
-          </thead>
-          <tbody id="mainTableBody"></tbody>
-        </table>
+    <div id="sectionAll">
+      <div class="section-title"><h2>Seluruh Data Backlog</h2><span class="sub">Tabel lengkap dengan filter mendalam</span></div>
+      <div class="panel">
+        <div class="table-toolbar">
+          <input class="toolbar-input" id="mainSearch" placeholder="Cari Shipment ID / User / Zone...">
+          <select class="toolbar-select" id="filterStatus"><option value="">Semua Status</option></select>
+          <select class="toolbar-select" id="filterZone"><option value="">Semua Zone</option></select>
+          <select class="toolbar-select" id="filterDay">
+            <option value="">Semua Umur</option>
+            <option value="1-5">1–5 hari</option>
+            <option value="6-10">6–10 hari</option>
+            <option value="10+">&gt;10 hari (SLA)</option>
+          </select>
+          <div class="toolbar-spacer"></div>
+          <span class="count-pill" id="mainCountPill">0 resi</span>
+          <button class="btn btn-outline" id="exportBtn">Export CSV</button>
+        </div>
+        <div class="scroll-table">
+          <table>
+            <thead>
+              <tr>
+                <th data-key="shipmentId">Shipment ID</th>
+                <th data-key="stationName">Station</th>
+                <th data-key="zoneName">Zone</th>
+                <th data-key="orderAccount">Account</th>
+                <th data-key="inboundTime">Inbound Time</th>
+                <th data-key="lmHubDays">Umur (Hari)</th>
+                <th data-key="attemptsNum">Attempts</th>
+                <th data-key="latestStatus">Latest Status</th>
+                <th data-key="latestOpTime">Operasi Terakhir</th>
+                <th data-key="userName">Last User</th>
+                <th data-key="destStation">Destination</th>
+              </tr>
+            </thead>
+            <tbody id="mainTableBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -537,7 +588,7 @@
 
 <script>
 let records = [];
-let sortState = { main: {key:'lmHubDays', dir:'desc'}, sla: {key:'lmHubDays', dir:'desc'} };
+let sortState = { main: {key:'lmHubDays', dir:'desc'}, sla: {key:'lmHubDays', dir:'desc'}, transported: {key:'lmHubDays', dir:'desc'} };
 
 const SLA_LIMIT = 10;
 const isAdmin = new URLSearchParams(location.search).has('admin');
@@ -577,6 +628,26 @@ uploadCard.addEventListener('drop', e=>{
 
 function openAdminModal(){ adminModal.classList.add('show'); }
 function closeAdminModal(){ adminModal.classList.remove('show'); }
+
+// ---------- KPI card -> buka tab baru menuju section terkait ----------
+function openKpiView(view){
+  const url = new URL(window.location.href);
+  url.searchParams.set('view', view);
+  window.open(url.toString(), '_blank');
+}
+const VIEW_SECTION_MAP = { all:'sectionAll', sla:'sectionSla', transported:'sectionTransported' };
+function applyViewFromUrl(){
+  const view = new URLSearchParams(location.search).get('view');
+  const targetId = VIEW_SECTION_MAP[view];
+  if(!targetId) return;
+  setTimeout(()=>{
+    const el = document.getElementById(targetId);
+    if(!el) return;
+    el.scrollIntoView({behavior:'smooth', block:'start'});
+    el.classList.add('flash-highlight');
+    setTimeout(()=>el.classList.remove('flash-highlight'), 2000);
+  }, 200);
+}
 
 refreshBtn.addEventListener('click', openAdminModal);
 modalCloseBtn.addEventListener('click', closeAdminModal);
@@ -717,6 +788,7 @@ async function loadDataFromServer(){
       document.getElementById('dashboard').style.display='block';
       updateFileChip(json.fileName, json.updatedAt);
       buildDashboard();
+      applyViewFromUrl();
     } else {
       document.getElementById('dashboard').style.display='none';
       if(isAdmin){
@@ -780,6 +852,14 @@ const EXCLUDED_STATUSES = ['delivering', 'on hold', 'onhold'];
 function isExcludedStatus(status){
   const norm = String(status||'').trim().toLowerCase().replace(/[_\-]+/g,' ').replace(/\s+/g,' ').trim();
   return EXCLUDED_STATUSES.includes(norm);
+}
+
+// Status "Transported" tetap dihitung backlog, tapi ditandai khusus karena tricky:
+// bisa jadi cuma tercatat masuk shipment, padahal fisik paket belum di-scan receive
+// dari Land Haul asal.
+function isTransportedStatus(status){
+  const norm = String(status||'').trim().toLowerCase().replace(/[_\-]+/g,' ').replace(/\s+/g,' ').trim();
+  return norm === 'transported';
 }
 
 function parseRows(json){
@@ -854,6 +934,7 @@ function buildDashboard(){
   buildZoneBars();
   buildFilterOptions();
   buildSLATable();
+  buildTransportedTable();
   buildUserCards();
   buildMainTable();
   attachSortHandlers();
@@ -866,11 +947,12 @@ function buildKPI(){
   const avgDays = total ? (records.reduce((s,r)=>s+r.lmHubDays,0)/total) : 0;
   const maxDays = total ? Math.max(...records.map(r=>r.lmHubDays)) : 0;
   const uniqueUsers = new Set(records.map(r=>r.userName)).size;
+  const transportedCount = records.filter(r=>isTransportedStatus(r.latestStatus)).length;
 
   const kpis = [
-    { label:'Total Stuck Order', value: total.toLocaleString('id-ID'), foot:'Seluruh paket dalam file backlog', accent:true,
+    { label:'Total Stuck Order', value: total.toLocaleString('id-ID'), foot:'Seluruh paket dalam file backlog', accent:true, view:'all',
       icon:'<path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' },
-    { label:'SLA Warning (>10 hari)', value: slaCount.toLocaleString('id-ID'), foot: total? ((slaCount/total*100).toFixed(1)+'% dari total — wajib end state') : '0%', warn:true,
+    { label:'SLA Warning (>10 hari)', value: slaCount.toLocaleString('id-ID'), foot: total? ((slaCount/total*100).toFixed(1)+'% dari total — wajib end state') : '0%', warn:true, view:'sla',
       icon:'<path d="M12 8v5m0 3h.01M10.3 3.6L2.6 17a2 2 0 001.7 3h15.4a2 2 0 001.7-3L13.7 3.6a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
     { label:'Rata-rata Umur', value: avgDays.toFixed(1)+' hr', foot:'Rata-rata semua paket stuck',
       icon:'<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' },
@@ -878,14 +960,18 @@ function buildKPI(){
       icon:'<path d="M12 2l2.4 7.2H22l-6 4.4 2.3 7.1L12 16.3l-6.3 4.4L8 13.6l-6-4.4h7.6z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' },
     { label:'Jumlah Last User', value: uniqueUsers.toLocaleString('id-ID'), foot:'User unik yang memegang backlog',
       icon:'<circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="2"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6M17 8a3 3 0 110 6M22 20c0-2.6-2-4.8-5-5.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' },
+    { label:'Transported (Cek Ulang)', value: transportedCount.toLocaleString('id-ID'), foot: total? ((transportedCount/total*100).toFixed(1)+'% dari total — cek manual ke Land Haul') : '0%', caution:true, view:'transported',
+      icon:'<path d="M3 7h11v8H3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 10h4l3 3v2h-7v-5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="7.3" cy="17" r="1.6" stroke="currentColor" stroke-width="1.6"/><circle cx="17.3" cy="17" r="1.6" stroke="currentColor" stroke-width="1.6"/>' },
   ];
   const grid = document.getElementById('kpiGrid');
   grid.innerHTML = kpis.map(k=>`
-    <div class="kpi ${k.accent?'accent':''} ${k.warn?'warn':''}">
+    <div class="kpi ${k.accent?'accent':''} ${k.warn?'warn':''} ${k.caution?'caution':''} ${k.view?'clickable':''}"
+      ${k.view?`onclick="openKpiView('${k.view}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openKpiView('${k.view}')"`:''}>
       <div class="kpi-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none">${k.icon}</svg></div>
       <div class="label">${k.label}</div>
       <div class="value">${k.value}</div>
       <div class="foot">${k.foot}</div>
+      ${k.view?'<div class="kpi-cta">Lihat resi →</div>':''}
     </div>
   `).join('');
 }
@@ -1029,6 +1115,33 @@ function buildSLATable(){
     </tr>`).join('');
 }
 
+function buildTransportedTable(){
+  let data = records.filter(r=>isTransportedStatus(r.latestStatus));
+  const search = (document.getElementById('transportedSearch').value||'').toLowerCase();
+  if(search){
+    data = data.filter(r=> r.shipmentId.toLowerCase().includes(search) || r.userName.toLowerCase().includes(search));
+  }
+  data = sortData(data, sortState.transported);
+  document.getElementById('transportedCountPill').textContent = data.length + ' resi';
+  const body = document.getElementById('transportedTableBody');
+  if(data.length===0){
+    body.innerHTML = `<tr><td colspan="9"><div class="empty-state">Tidak ada paket berstatus Transported saat ini 🎉</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = data.map(r=>`
+    <tr>
+      <td class="mono">${r.shipmentId}</td>
+      <td>${r.stationName}</td>
+      <td>${r.zoneName}</td>
+      <td>${fmtDate(r.inboundTime)}</td>
+      <td>${dayTagHtml(r.lmHubDays)}</td>
+      <td>${r.attemptsText}</td>
+      <td>${r.userName}</td>
+      <td>${fmtDate(r.latestOpTime)}</td>
+      <td>${r.destStation}</td>
+    </tr>`).join('');
+}
+
 function buildUserCards(){
   const map = {};
   records.forEach(r=>{
@@ -1145,15 +1258,17 @@ function buildMainTable(){
 
 function attachSortHandlers(){
   document.querySelectorAll('#dashboard table thead').forEach(thead=>{
-    const isSla = thead.closest('table').querySelector('#slaTableBody') !== null;
-    const stateKey = isSla ? 'sla' : 'main';
+    const table = thead.closest('table');
+    let stateKey = 'main', rebuild = buildMainTable;
+    if(table.querySelector('#slaTableBody')){ stateKey='sla'; rebuild=buildSLATable; }
+    else if(table.querySelector('#transportedTableBody')){ stateKey='transported'; rebuild=buildTransportedTable; }
     thead.querySelectorAll('th[data-key]').forEach(th=>{
       th.addEventListener('click', ()=>{
         const key = th.dataset.key;
         const st = sortState[stateKey];
         if(st.key===key) st.dir = st.dir==='asc'?'desc':'asc';
         else { st.key = key; st.dir = 'desc'; }
-        if(isSla) buildSLATable(); else buildMainTable();
+        rebuild();
       });
     });
   });
@@ -1161,6 +1276,7 @@ function attachSortHandlers(){
 
 function attachFilterHandlers(){
   document.getElementById('slaSearch').addEventListener('input', buildSLATable);
+  document.getElementById('transportedSearch').addEventListener('input', buildTransportedTable);
   document.getElementById('userSearch').addEventListener('input', buildUserCards);
   document.getElementById('mainSearch').addEventListener('input', buildMainTable);
   document.getElementById('filterStatus').addEventListener('change', buildMainTable);
