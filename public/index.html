@@ -856,10 +856,11 @@ function isExcludedStatus(status){
 
 // Status "Transported" tetap dihitung backlog, tapi ditandai khusus karena tricky:
 // bisa jadi cuma tercatat masuk shipment, padahal fisik paket belum di-scan receive
-// dari Land Haul asal.
+// dari Land Haul asal. Di FMS kadang muncul sebagai "SOC_LHTransported" dsb — jadi
+// dicek pakai substring match, bukan exact match.
 function isTransportedStatus(status){
   const norm = String(status||'').trim().toLowerCase().replace(/[_\-]+/g,' ').replace(/\s+/g,' ').trim();
-  return norm === 'transported';
+  return norm.includes('transported');
 }
 
 function parseRows(json){
