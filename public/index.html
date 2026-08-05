@@ -14,29 +14,34 @@
     --orange-600:#ee4d1f;
     --orange-500:#f2601e;
     --orange-400:#ff7a3d;
-    --orange-100:#ffe6d8;
-    --orange-50:#fff4ee;
+    --orange-100:#ffe0cf;
+    --orange-50:#fff1ea;
     --paper:#ffffff;
-    --bg:#fbf9f7;
-    --line:#efe4dc;
-    --line-strong:#e6d5c8;
-    --ink:#241a15;
-    --ink-soft:#6b5c52;
-    --ink-faint:#a3948a;
-    --green:#1f8a4c;
-    --green-bg:#eaf7ef;
-    --amber:#b8790a;
-    --amber-bg:#fff6e3;
-    --red:#c22a1f;
+    --bg:#f2f3f6;
+    --line:#e5e7ec;
+    --line-strong:#d7dae2;
+    --ink:#12141c;
+    --ink-soft:#494f5c;
+    --ink-faint:#8b93a1;
+    --green:#12855a;
+    --green-bg:#e7f7f0;
+    --amber:#b3790a;
+    --amber-bg:#fff5e0;
+    --red:#cf2c1a;
     --red-bg:#fdeae7;
-    --shadow: 0 1px 2px rgba(36,26,21,0.04), 0 6px 20px -8px rgba(36,26,21,0.10);
+    --flag:#5b4fd6;
+    --flag-bg:#efedfc;
+    --shadow: 0 1px 2px rgba(15,17,25,0.04), 0 10px 26px -14px rgba(15,17,25,0.16);
     --radius: 14px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  @media(prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} }
+  #sectionOverview,#sectionSla,#sectionTransported,#sectionUsers,#sectionAll{scroll-margin-top:128px;}
   body{
     background:
-      radial-gradient(1200px 500px at 90% -10%, var(--orange-50), transparent 60%),
+      radial-gradient(1100px 460px at 96% -12%, rgba(238,77,31,0.07), transparent 60%),
       var(--bg);
     color:var(--ink);
     font-family:'Inter',system-ui,sans-serif;
@@ -185,10 +190,68 @@
   #dashboard{display:none;}
   .container{max-width:1440px;margin:0 auto;padding:26px 28px 60px;}
 
-  .section-title{
-    display:flex;align-items:baseline;gap:10px;margin:36px 0 14px;
+  /* Subnav quick-jump */
+  .subnav{
+    position:sticky;top:74px;z-index:40;background:rgba(242,243,246,0.9);backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+    display:flex;gap:4px;padding:0 28px;overflow-x:auto;scrollbar-width:none;
   }
-  .section-title h2{font-size:15px;font-weight:800;margin:0;letter-spacing:0.2px;}
+  .subnav::-webkit-scrollbar{display:none;}
+  .subnav a{
+    flex:0 0 auto;font-size:12.5px;font-weight:700;color:var(--ink-faint);text-decoration:none;
+    padding:13px 14px 11px;border-bottom:2.5px solid transparent;white-space:nowrap;transition:.15s;
+  }
+  .subnav a:hover{color:var(--ink-soft);}
+  .subnav a.active{color:var(--orange-700);border-bottom-color:var(--orange-600);}
+  @media(max-width:680px){ .subnav{top:64px;padding:0 14px;} }
+
+  /* Pulse / health strip (hero signature) */
+  .pulse-card{
+    background:var(--paper);border:1px solid var(--line);border-radius:16px;
+    padding:20px 22px;box-shadow:var(--shadow);margin:22px 0 6px;
+  }
+  .pulse-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+  .pulse-eyebrow{font-size:10.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--orange-600);}
+  .pulse-title{font-family:'Manrope';font-size:17px;font-weight:800;margin-top:3px;}
+  .pulse-sub{font-size:12px;color:var(--ink-faint);margin-top:3px;max-width:520px;line-height:1.5;}
+  .pulse-flag{
+    flex:0 0 auto;background:var(--flag-bg);color:var(--flag);border-radius:11px;padding:9px 13px;
+    font-size:12px;font-weight:700;cursor:pointer;border:1px solid #d8d4f7;transition:.15s;
+    display:flex;align-items:center;gap:8px;
+  }
+  .pulse-flag:hover{background:#e5e1fb;}
+  .pulse-bar{
+    display:flex;width:100%;height:14px;border-radius:8px;overflow:hidden;background:var(--line);
+  }
+  .pulse-seg{height:100%;min-width:2px;transition:width 0.7s cubic-bezier(.2,.8,.2,1);}
+  @media(prefers-reduced-motion:reduce){ .pulse-seg{transition:none;} }
+  .pulse-legend{display:flex;gap:22px;flex-wrap:wrap;margin-top:13px;}
+  .pulse-legend .item{font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:7px;}
+  .pulse-legend .sw{width:9px;height:9px;border-radius:3px;flex:0 0 auto;}
+  .pulse-legend .ct{font-weight:800;color:var(--ink);}
+
+  /* Analyst insight panel */
+  .insight-card{
+    background:linear-gradient(180deg,#171a24,#12141c);color:#f4f5f7;border-radius:16px;
+    padding:20px 22px 18px;box-shadow:var(--shadow);margin:16px 0 6px;
+  }
+  .insight-head{display:flex;align-items:center;gap:9px;margin-bottom:13px;}
+  .insight-head .ico{width:26px;height:26px;border-radius:8px;background:rgba(238,77,31,0.22);color:var(--orange-400);
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .insight-head .t{font-family:'Manrope';font-size:13.5px;font-weight:800;letter-spacing:0.2px;}
+  .insight-head .t span{display:block;font-family:'Inter';font-size:10.5px;font-weight:700;letter-spacing:0.6px;
+    text-transform:uppercase;color:rgba(244,245,247,0.5);margin-bottom:2px;}
+  .insight-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px 22px;}
+  .insight-row{display:flex;gap:10px;font-size:12.6px;line-height:1.55;color:rgba(244,245,247,0.88);}
+  .insight-row .bullet{flex:0 0 auto;width:5px;height:5px;border-radius:50%;background:var(--orange-400);margin-top:7px;}
+  .insight-row b{color:#fff;font-weight:700;}
+
+
+  .section-title{
+    display:flex;align-items:center;gap:11px;margin:44px 0 16px;
+  }
+  .section-title h2{font-size:15.5px;font-weight:800;margin:0;letter-spacing:0.1px;display:flex;align-items:center;gap:10px;}
+  .section-title h2::before{content:"";width:4px;height:15px;background:var(--orange-600);border-radius:2px;display:inline-block;}
   .section-title .sub{font-size:12px;color:var(--ink-faint);}
   .section-title::after{
     content:"";flex:1;height:1px;background:var(--line);
@@ -201,32 +264,36 @@
   }
   .kpi{
     background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
-    padding:18px 18px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+    padding:19px 18px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden;
   }
-  .kpi .label{font-size:11.5px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;display:flex;align-items:center;gap:6px;}
-  .kpi .value{font-family:'Manrope';font-size:30px;font-weight:800;margin-top:8px;line-height:1;}
-  .kpi .foot{font-size:11.5px;color:var(--ink-faint);margin-top:8px;}
-  .kpi.accent{background:linear-gradient(160deg,var(--orange-600),var(--orange-700));color:#fff;border:none;}
-  .kpi.accent .label{color:rgba(255,255,255,0.85);}
-  .kpi.accent .foot{color:rgba(255,255,255,0.75);}
+  .kpi::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--line-strong);
+  }
+  .kpi .label{font-size:11px;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:6px;}
+  .kpi .value{font-family:'Manrope';font-size:29px;font-weight:800;margin-top:9px;line-height:1;letter-spacing:-0.3px;}
+  .kpi .foot{font-size:11.5px;color:var(--ink-faint);margin-top:8px;line-height:1.45;}
+  .kpi.accent::before{background:var(--orange-600);}
+  .kpi.accent .value{color:var(--orange-700);}
   .kpi.warn{border-color:#f4c6bd;}
+  .kpi.warn::before{background:var(--red);}
   .kpi.warn .value{color:var(--red);}
-  .kpi.caution{border-color:#f0dba8;}
-  .kpi.caution .value{color:var(--amber);}
+  .kpi.caution{border-color:#d8d4f7;}
+  .kpi.caution::before{background:var(--flag);}
+  .kpi.caution .value{color:var(--flag);}
   .kpi-icon{
-    position:absolute;right:14px;top:14px;width:30px;height:30px;border-radius:9px;
+    position:absolute;right:14px;top:16px;width:30px;height:30px;border-radius:9px;
     display:flex;align-items:center;justify-content:center;background:var(--orange-50);color:var(--orange-600);
   }
-  .kpi.accent .kpi-icon{background:rgba(255,255,255,0.18);color:#fff;}
+  .kpi.accent .kpi-icon{background:var(--orange-50);color:var(--orange-600);}
   .kpi.warn .kpi-icon{background:var(--red-bg);color:var(--red);}
-  .kpi.caution .kpi-icon{background:var(--amber-bg);color:var(--amber);}
+  .kpi.caution .kpi-icon{background:var(--flag-bg);color:var(--flag);}
   .kpi.clickable{cursor:pointer;transition:transform .15s ease, box-shadow .15s ease;}
-  .kpi.clickable:hover{transform:translateY(-3px);box-shadow:0 16px 32px -14px rgba(36,26,21,0.28);}
+  .kpi.clickable:hover{transform:translateY(-3px);box-shadow:0 18px 34px -16px rgba(15,17,25,0.24);}
+  .kpi.clickable:hover .kpi-cta{gap:7px;}
   .kpi.clickable:focus-visible{outline:2px solid var(--orange-500);outline-offset:2px;}
-  .kpi-cta{font-size:10.8px;font-weight:700;margin-top:10px;color:var(--orange-600);display:flex;align-items:center;gap:4px;}
-  .kpi.accent .kpi-cta{color:#fff;}
+  .kpi-cta{font-size:10.8px;font-weight:700;margin-top:11px;color:var(--orange-600);display:flex;align-items:center;gap:4px;transition:gap .15s ease;}
   .kpi.warn .kpi-cta{color:var(--red);}
-  .kpi.caution .kpi-cta{color:var(--amber);}
+  .kpi.caution .kpi-cta{color:var(--flag);}
 
   @keyframes flashHighlight{
     0%{box-shadow:0 0 0 0 rgba(238,77,31,0.35);}
@@ -306,7 +373,10 @@
   .badge-green{background:var(--green-bg);color:var(--green);}
   .badge-amber{background:var(--amber-bg);color:var(--amber);}
   .badge-red{background:var(--red-bg);color:var(--red);}
-  .badge-status{background:#f1eae4;color:var(--ink-soft);}
+  .badge-flag{background:var(--flag-bg);color:var(--flag);}
+  .badge-status{background:#eef0f4;color:var(--ink-soft);}
+  .badge{display:inline-flex;align-items:center;gap:5px;}
+  .badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto;}
   .day-tag{font-weight:800;}
   .day-tag.green{color:var(--green);}
   .day-tag.amber{color:var(--amber);}
@@ -430,9 +500,40 @@
 
 <!-- DASHBOARD -->
 <div id="dashboard">
+  <nav class="subnav" id="subnav">
+    <a href="#sectionOverview">Ringkasan</a>
+    <a href="#sectionSla">SLA Warning</a>
+    <a href="#sectionTransported">Transported</a>
+    <a href="#sectionUsers">Per User</a>
+    <a href="#sectionAll">Semua Data</a>
+  </nav>
   <div class="container">
 
+    <div class="pulse-card" id="pulseCard">
+      <div class="pulse-head">
+        <div>
+          <div class="pulse-eyebrow">Kesehatan Backlog</div>
+          <div class="pulse-title" id="pulseTitle">–</div>
+          <div class="pulse-sub">Proporsi umur seluruh paket stuck berdasarkan tingkat urgensi. Klik segmen SLA Warning atau kartu Transported untuk lihat resinya.</div>
+        </div>
+        <div class="pulse-flag" id="pulseFlag" onclick="openKpiView('transported')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 7h11v8H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 10h4l3 3v2h-7v-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="7.3" cy="17" r="1.5" stroke="currentColor" stroke-width="1.6"/><circle cx="17.3" cy="17" r="1.5" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span id="pulseFlagText">0 transported</span>
+        </div>
+      </div>
+      <div class="pulse-bar" id="pulseBar"></div>
+      <div class="pulse-legend" id="pulseLegend"></div>
+    </div>
 
+    <div class="insight-card" id="insightCard">
+      <div class="insight-head">
+        <div class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2.3h6c0-1.1.4-1.8 1-2.3A7 7 0 0012 2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+        <div class="t"><span>Analyst Notes</span>Insight otomatis dari data hari ini</div>
+      </div>
+      <div class="insight-list" id="insightList"></div>
+    </div>
+
+    <div id="sectionOverview">
     <div class="section-title"><h2>Ringkasan Backlog</h2><span class="sub">Overview stuck order saat ini</span></div>
     <div class="kpi-grid" id="kpiGrid"></div>
 
@@ -470,6 +571,8 @@
         <div class="panel-sub">Zone dengan jumlah stuck order terbanyak</div>
         <div id="zoneBarList"></div>
       </div>
+    </div>
+
     </div>
 
     <div id="sectionSla">
@@ -532,6 +635,7 @@
       </div>
     </div>
 
+    <div id="sectionUsers">
     <div class="section-title"><h2>Detail per Last User</h2><span class="sub">Semua resi yang dipegang tiap user</span></div>
     <div class="panel">
       <div class="table-toolbar">
@@ -540,6 +644,7 @@
         <span class="count-pill" id="userCountPill">0 user</span>
       </div>
       <div id="userCardList"></div>
+    </div>
     </div>
 
     <div id="sectionAll">
@@ -929,6 +1034,8 @@ function severityLabel(days){
 // ---------- Build dashboard ----------
 function buildDashboard(){
   buildKPI();
+  buildPulse();
+  buildInsights();
   buildHistogram();
   buildDonut();
   buildUserBars();
@@ -940,6 +1047,89 @@ function buildDashboard(){
   buildMainTable();
   attachSortHandlers();
   attachFilterHandlers();
+  initSubnavScrollSpy();
+}
+
+function buildPulse(){
+  const total = records.length;
+  const buckets = {green:0, amber:0, red:0};
+  records.forEach(r=>{ buckets[severityOf(r.lmHubDays)]++; });
+  const transportedCount = records.filter(r=>isTransportedStatus(r.latestStatus)).length;
+  document.getElementById('pulseTitle').textContent = total ? `${total.toLocaleString('id-ID')} paket sedang dipantau` : 'Belum ada data';
+  document.getElementById('pulseFlagText').textContent = `${transportedCount.toLocaleString('id-ID')} transported`;
+  const segs = [
+    {label:'Normal (≤5 hari)', color:'var(--green)', count:buckets.green},
+    {label:'Perlu Perhatian (6–10 hari)', color:'var(--amber)', count:buckets.amber},
+    {label:'SLA Breach (>10 hari)', color:'var(--red)', count:buckets.red},
+  ];
+  const bar = document.getElementById('pulseBar');
+  bar.innerHTML = segs.map(s=>{
+    const pct = total ? (s.count/total*100) : 0;
+    return `<div class="pulse-seg" data-w="${pct}" style="width:0%;background:${s.color}" title="${s.label}: ${s.count} resi (${pct.toFixed(1)}%)"></div>`;
+  }).join('');
+  requestAnimationFrame(()=>{
+    bar.querySelectorAll('.pulse-seg').forEach(el=>{ el.style.width = el.dataset.w + '%'; });
+  });
+  document.getElementById('pulseLegend').innerHTML = segs.map(s=>{
+    const pct = total ? (s.count/total*100) : 0;
+    return `<div class="item"><span class="sw" style="background:${s.color}"></span>${s.label} <span class="ct">${s.count.toLocaleString('id-ID')}</span> <span style="color:var(--ink-faint)">(${pct.toFixed(1)}%)</span></div>`;
+  }).join('');
+}
+
+function buildInsights(){
+  const total = records.length;
+  const list = document.getElementById('insightList');
+  if(!total){
+    list.innerHTML = '<div class="insight-row"><span class="bullet"></span>Belum ada data untuk dianalisis.</div>';
+    return;
+  }
+  const slaCount = records.filter(r=>r.lmHubDays>SLA_LIMIT).length;
+  const transportedCount = records.filter(r=>isTransportedStatus(r.latestStatus)).length;
+
+  const zoneMap = {};
+  records.forEach(r=>{ zoneMap[r.zoneName] = (zoneMap[r.zoneName]||0)+1; });
+  const topZone = Object.entries(zoneMap).sort((a,b)=>b[1]-a[1])[0];
+
+  const userMap = {};
+  records.forEach(r=>{
+    if(!userMap[r.userName]) userMap[r.userName] = {count:0, days:0};
+    userMap[r.userName].count++; userMap[r.userName].days += r.lmHubDays;
+  });
+  const topUser = Object.entries(userMap).sort((a,b)=>b[1].count-a[1].count)[0];
+
+  const insights = [];
+  insights.push(`<b>${slaCount.toLocaleString('id-ID')} resi (${(slaCount/total*100).toFixed(1)}%)</b> sudah lewat SLA &gt;10 hari — prioritas end state hari ini.`);
+  if(topZone){
+    insights.push(`Zone <b>${topZone[0]}</b> menyumbang <b>${topZone[1]} resi (${(topZone[1]/total*100).toFixed(1)}%)</b> dari total backlog — zone paling bermasalah saat ini.`);
+  }
+  if(topUser){
+    const [name, d] = topUser;
+    const avg = d.days / d.count;
+    insights.push(`<b>${name}</b> memegang <b>${d.count} resi</b>, rata-rata umur ${avg.toFixed(1)} hari — kandidat prioritas redistribusi beban.`);
+  }
+  insights.push(`<b>${transportedCount.toLocaleString('id-ID')} resi (${(transportedCount/total*100).toFixed(1)}%)</b> berstatus Transported — rawan cuma tercatat sistem, wajib cek fisik ke Land Haul.`);
+  list.innerHTML = insights.map(t=>`<div class="insight-row"><span class="bullet"></span>${t}</div>`).join('');
+}
+
+let subnavObserverInitialized = false;
+function initSubnavScrollSpy(){
+  if(subnavObserverInitialized) return;
+  subnavObserverInitialized = true;
+  const links = document.querySelectorAll('#subnav a');
+  if(!links.length) return;
+  const map = {};
+  links.forEach(a=>{ map[a.getAttribute('href').slice(1)] = a; });
+  const sections = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  if(!sections.length || !('IntersectionObserver' in window)) return;
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        links.forEach(a=>a.classList.remove('active'));
+        map[entry.target.id].classList.add('active');
+      }
+    });
+  }, { rootMargin: '-140px 0px -70% 0px', threshold: 0 });
+  sections.forEach(s=>observer.observe(s));
 }
 
 function buildKPI(){
@@ -1087,7 +1277,11 @@ function dayTagHtml(days){
 function badgeHtml(days){
   const sev = severityOf(days);
   const cls = sev==='red'?'badge-red':(sev==='amber'?'badge-amber':'badge-green');
-  return `<span class="badge ${cls}">${severityLabel(days)}</span>`;
+  return `<span class="badge ${cls}"><span class="dot"></span>${severityLabel(days)}</span>`;
+}
+function statusBadgeHtml(status){
+  const cls = isTransportedStatus(status) ? 'badge-flag' : 'badge-status';
+  return `<span class="badge ${cls}"><span class="dot"></span>${status}</span>`;
 }
 
 function buildSLATable(){
@@ -1108,7 +1302,7 @@ function buildSLATable(){
       <td class="mono">${r.shipmentId}</td>
       <td>${r.zoneName}</td>
       <td>${dayTagHtml(r.lmHubDays)}</td>
-      <td><span class="badge badge-status">${r.latestStatus}</span></td>
+      <td>${statusBadgeHtml(r.latestStatus)}</td>
       <td>${r.attemptsText}</td>
       <td>${r.userName}</td>
       <td>${fmtDate(r.latestOpTime)}</td>
@@ -1185,7 +1379,7 @@ function buildUserCards(){
           <div class="resi-chip-row">
             <span class="rid">${i.shipmentId}</span>
             <span style="color:var(--ink-faint)">${i.zoneName}</span>
-            <span><span class="badge badge-status">${i.latestStatus}</span></span>
+            <span>${statusBadgeHtml(i.latestStatus)}</span>
             ${dayTagHtml(i.lmHubDays)} hari
             ${badgeHtml(i.lmHubDays)}
           </div>`).join('')}
@@ -1249,7 +1443,7 @@ function buildMainTable(){
       <td>${fmtDate(r.inboundTime)}</td>
       <td>${dayTagHtml(r.lmHubDays)}</td>
       <td>${r.attemptsText}</td>
-      <td><span class="badge badge-status">${r.latestStatus}</span></td>
+      <td>${statusBadgeHtml(r.latestStatus)}</td>
       <td>${fmtDate(r.latestOpTime)}</td>
       <td>${r.userName}</td>
       <td>${r.destStation}</td>
