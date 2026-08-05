@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPX Backlog Monitoring Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --orange-900:#8f2c11;
+    --orange-700:#c93d16;
+    --orange-600:#ee4d1f;
+    --orange-500:#f2601e;
+    --orange-400:#ff7a3d;
+    --orange-100:#ffe6d8;
+    --orange-50:#fff4ee;
+    --paper:#ffffff;
+    --bg:#fbf9f7;
+    --line:#efe4dc;
+    --line-strong:#e6d5c8;
+    --ink:#241a15;
+    --ink-soft:#6b5c52;
+    --ink-faint:#a3948a;
+    --green:#1f8a4c;
+    --green-bg:#eaf7ef;
+    --amber:#b8790a;
+    --amber-bg:#fff6e3;
+    --red:#c22a1f;
+    --red-bg:#fdeae7;
+    --shadow: 0 1px 2px rgba(36,26,21,0.04), 0 6px 20px -8px rgba(36,26,21,0.10);
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 90% -10%, var(--orange-50), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    font-variant-numeric: tabular-nums;
+    min-height:100vh;
+  }
+  ::selection{background:var(--orange-100);}
+  h1,h2,h3,.display{font-family:'Manrope',system-ui,sans-serif;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    background:linear-gradient(120deg,var(--orange-700) 0%, var(--orange-600) 45%, var(--orange-500) 100%);
+    color:#fff;
+    padding:18px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    position:sticky;
+    top:0;
+    z-index:50;
+    box-shadow:0 4px 24px -8px rgba(180,60,20,0.45);
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:10px;
+    background:#fff; color:var(--orange-600);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Manrope';font-weight:800;font-size:16px;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.05);
+  }
+  .brand-text h1{font-size:16px;margin:0;font-weight:800;letter-spacing:0.2px;}
+  .brand-text span{font-size:11.5px;opacity:0.92;font-weight:500;letter-spacing:0.3px;text-transform:uppercase;}
+  .topbar-right{display:flex;align-items:center;gap:10px;}
+  .file-chip{
+    background:rgba(255,255,255,0.16);
+    border:1px solid rgba(255,255,255,0.35);
+    padding:7px 12px;border-radius:999px;
+    font-size:12.5px;font-weight:600;
+    display:flex;align-items:center;gap:8px;
+    max-width:280px;
+  }
+  .file-chip .dot{width:7px;height:7px;border-radius:50%;background:#7CFFA1;flex:0 0 auto;box-shadow:0 0 0 3px rgba(124,255,161,0.25);}
+  .file-chip .fname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .btn{
+    border:none;cursor:pointer;font-family:'Inter';font-weight:700;font-size:12.5px;
+    padding:9px 16px;border-radius:10px;transition:.15s ease;letter-spacing:0.1px;
+  }
+  .btn-light{background:#fff;color:var(--orange-700);}
+  .btn-light:hover{background:#fff0e8;}
+  .btn-ghost{background:rgba(255,255,255,0.14);color:#fff;border:1px solid rgba(255,255,255,0.4);}
+  .btn-ghost:hover{background:rgba(255,255,255,0.24);}
+  .btn-outline{background:#fff;color:var(--orange-700);border:1.5px solid var(--orange-200,#f3c7ad);}
+  .btn-outline:hover{background:var(--orange-50);}
+
+  /* ---------- Admin modal ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(36,26,21,0.55);
+    display:none;align-items:center;justify-content:center;
+    z-index:200;padding:20px;backdrop-filter:blur(2px);
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-close{
+    position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;
+    color:var(--ink-faint);width:30px;height:30px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .modal-close:hover{background:var(--orange-50);color:var(--ink);}
+  .upload-card{
+    background:var(--paper);
+    border:1.5px dashed var(--line-strong);
+    border-radius:20px;
+    max-width:560px;width:100%;
+    padding:44px 36px;
+    text-align:center;
+    box-shadow:0 20px 60px -20px rgba(36,26,21,0.35);
+    transition:.15s;
+    position:relative;
+  }
+  .upload-card.drag{border-color:var(--orange-500); background:var(--orange-50);}
+  .upload-icon{
+    width:64px;height:64px;border-radius:16px;margin:0 auto 18px;
+    background:linear-gradient(135deg,var(--orange-500),var(--orange-700));
+    display:flex;align-items:center;justify-content:center;color:#fff;
+    box-shadow:0 10px 24px -10px rgba(198,60,20,0.6);
+  }
+  .upload-card h2{font-size:19px;margin:0 0 8px;font-weight:800;}
+  .upload-card p{font-size:13.5px;color:var(--ink-soft);line-height:1.6;margin:0 0 22px;}
+  .upload-btn{
+    background:var(--orange-600);color:#fff;padding:12px 26px;border-radius:11px;
+    font-weight:700;font-size:13.5px;cursor:pointer;border:none;
+    box-shadow:0 8px 18px -8px rgba(198,60,20,0.55);
+  }
+  .upload-btn:hover{background:var(--orange-700);}
+  .upload-hint{margin-top:16px;font-size:11.5px;color:var(--ink-faint);}
+  .upload-fields{
+    margin-top:26px;padding-top:22px;border-top:1px solid var(--line);
+    text-align:left;font-size:11.5px;color:var(--ink-soft);
+  }
+  .upload-fields b{color:var(--ink);}
+  #fileInput{display:none;}
+  .err-box{
+    margin-top:16px;background:var(--red-bg);color:var(--red);border:1px solid #f4c6bd;
+    padding:10px 14px;border-radius:10px;font-size:12.5px;text-align:left;display:none;
+  }
+  .success-box{
+    margin-top:16px;background:var(--green-bg);color:var(--green);border:1px solid #b9e6c8;
+    padding:12px 14px;border-radius:10px;font-size:12.5px;text-align:left;display:none;
+  }
+  .success-box button{margin-top:10px;}
+
+  /* ---------- Empty state (non-admin, no data yet) ---------- */
+  .empty-wrap{
+    min-height:calc(100vh - 74px);
+    display:flex;align-items:center;justify-content:center;
+    padding:40px 20px;text-align:center;
+  }
+  .empty-wrap-inner{max-width:420px;}
+  .empty-wrap-inner .ico{
+    width:56px;height:56px;border-radius:14px;margin:0 auto 16px;
+    background:var(--orange-50);color:var(--orange-500);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .empty-wrap-inner h2{font-size:17px;margin:0 0 8px;font-weight:800;}
+  .empty-wrap-inner p{font-size:13px;color:var(--ink-soft);line-height:1.6;margin:0;}
+
+  .admin-badge{
+    background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.35);
+    color:#fff;font-size:10.5px;font-weight:700;padding:5px 10px;border-radius:999px;
+    letter-spacing:0.3px;text-transform:uppercase;
+  }
+
+  /* ---------- Dashboard ---------- */
+  #dashboard{display:none;}
+  .container{max-width:1440px;margin:0 auto;padding:26px 28px 60px;}
+
+  .section-title{
+    display:flex;align-items:baseline;gap:10px;margin:36px 0 14px;
+  }
+  .section-title h2{font-size:15px;font-weight:800;margin:0;letter-spacing:0.2px;}
+  .section-title .sub{font-size:12px;color:var(--ink-faint);}
+  .section-title::after{
+    content:"";flex:1;height:1px;background:var(--line);
+  }
+  .section-title:first-child, .container>.section-title:first-of-type{margin-top:6px;}
+
+  /* KPI cards */
+  .kpi-grid{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:14px;
+  }
+  .kpi{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 18px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  .kpi .label{font-size:11.5px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;display:flex;align-items:center;gap:6px;}
+  .kpi .value{font-family:'Manrope';font-size:30px;font-weight:800;margin-top:8px;line-height:1;}
+  .kpi .foot{font-size:11.5px;color:var(--ink-faint);margin-top:8px;}
+  .kpi.accent{background:linear-gradient(160deg,var(--orange-600),var(--orange-700));color:#fff;border:none;}
+  .kpi.accent .label{color:rgba(255,255,255,0.85);}
+  .kpi.accent .foot{color:rgba(255,255,255,0.75);}
+  .kpi.warn{border-color:#f4c6bd;}
+  .kpi.warn .value{color:var(--red);}
+  .kpi-icon{
+    position:absolute;right:14px;top:14px;width:30px;height:30px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;background:var(--orange-50);color:var(--orange-600);
+  }
+  .kpi.accent .kpi-icon{background:rgba(255,255,255,0.18);color:#fff;}
+  .kpi.warn .kpi-icon{background:var(--red-bg);color:var(--red);}
+
+  /* Panels layout */
+  .panel-row{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:stretch;}
+  .panel{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px 20px 18px;box-shadow:var(--shadow);
+  }
+  .panel h3{font-size:13.5px;margin:0 0 3px;font-weight:800;}
+  .panel .panel-sub{font-size:11.5px;color:var(--ink-faint);margin-bottom:14px;}
+
+  /* Histogram chart */
+  .hist-chart{display:flex;align-items:flex-end;gap:8px;height:170px;padding-top:6px;}
+  .hist-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+  .hist-bar{
+    width:100%;max-width:34px;border-radius:6px 6px 3px 3px;
+    background:var(--green);position:relative;transition:height .4s ease;
+    min-height:3px;
+  }
+  .hist-bar.amber{background:var(--amber);}
+  .hist-bar.red{background:var(--red);}
+  .hist-count{font-size:10.5px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;}
+  .hist-label{font-size:10px;color:var(--ink-faint);margin-top:7px;font-weight:600;}
+  .hist-legend{display:flex;gap:16px;margin-top:16px;font-size:11px;color:var(--ink-soft);flex-wrap:wrap;}
+  .hist-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend-dot{width:8px;height:8px;border-radius:2px;}
+
+  /* Donut */
+  .donut-wrap{display:flex;align-items:center;gap:20px;}
+  .donut-legend{flex:1;display:flex;flex-direction:column;gap:9px;}
+  .donut-row{display:flex;align-items:center;gap:8px;font-size:12px;}
+  .donut-row .sw{width:9px;height:9px;border-radius:3px;flex:0 0 auto;}
+  .donut-row .nm{flex:1;color:var(--ink-soft);}
+  .donut-row .ct{font-weight:700;color:var(--ink);}
+
+  /* User bar list */
+  .user-bar-row{display:grid;grid-template-columns:118px 1fr 46px;gap:10px;align-items:center;font-size:12px;padding:6px 0;}
+  .user-bar-row .un{color:var(--ink-soft);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .user-bar-track{background:var(--orange-50);border-radius:6px;height:9px;overflow:hidden;}
+  .user-bar-fill{height:100%;background:linear-gradient(90deg,var(--orange-400),var(--orange-600));border-radius:6px;}
+  .user-bar-row .ct{text-align:right;font-weight:700;color:var(--ink);}
+
+  /* Tables */
+  .table-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+  .toolbar-input, .toolbar-select{
+    border:1px solid var(--line-strong);background:#fff;border-radius:9px;
+    padding:8px 12px;font-size:12.5px;font-family:'Inter';color:var(--ink);outline:none;
+  }
+  .toolbar-input{min-width:220px;}
+  .toolbar-input:focus, .toolbar-select:focus{border-color:var(--orange-400);box-shadow:0 0 0 3px var(--orange-50);}
+  .toolbar-spacer{flex:1;}
+  .count-pill{font-size:11.5px;color:var(--ink-soft);background:var(--orange-50);padding:6px 12px;border-radius:999px;font-weight:600;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.3px;}
+  thead th{
+    text-align:left;padding:10px 12px;background:var(--orange-50);color:var(--orange-700);
+    font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;
+    cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0;
+  }
+  thead th:first-child{border-radius:8px 0 0 8px;}
+  thead th:last-child{border-radius:0 8px 8px 0;}
+  thead th:hover{background:var(--orange-100);}
+  thead th .arrow{opacity:0.4;font-size:9px;margin-left:3px;}
+  tbody td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink);white-space:nowrap;}
+  tbody tr:hover{background:var(--orange-50);}
+  tbody tr.sla-row{background:var(--red-bg);}
+  tbody tr.sla-row:hover{background:#fbdad3;}
+  .mono{font-family:'SFMono-Regular',Consolas,monospace;font-size:11.6px;color:var(--ink-soft);}
+  .badge{
+    display:inline-block;padding:3px 9px;border-radius:999px;font-size:10.8px;font-weight:700;
+  }
+  .badge-green{background:var(--green-bg);color:var(--green);}
+  .badge-amber{background:var(--amber-bg);color:var(--amber);}
+  .badge-red{background:var(--red-bg);color:var(--red);}
+  .badge-status{background:#f1eae4;color:var(--ink-soft);}
+  .day-tag{font-weight:800;}
+  .day-tag.green{color:var(--green);}
+  .day-tag.amber{color:var(--amber);}
+  .day-tag.red{color:var(--red);}
+  .scroll-table{max-height:560px;overflow:auto;border-radius:10px;}
+  .empty-state{padding:40px;text-align:center;color:var(--ink-faint);font-size:13px;}
+
+  /* User detail modal-ish expand */
+  .user-card{
+    background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;
+  }
+  .user-card-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:12px;}
+  .user-card-head .uid{
+    width:34px;height:34px;border-radius:9px;background:var(--orange-50);color:var(--orange-700);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex:0 0 auto;
+  }
+  .user-card-head .info{flex:1;min-width:0;}
+  .user-card-head .info .nm{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .user-card-head .info .meta{font-size:11.2px;color:var(--ink-faint);margin-top:2px;}
+  .user-card-head .stats{display:flex;gap:18px;align-items:center;}
+  .user-card-head .stat{text-align:right;}
+  .user-card-head .stat .n{font-weight:800;font-size:15px;font-family:'Manrope';}
+  .user-card-head .stat .l{font-size:9.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.3px;}
+  .chev{transition:.2s;color:var(--ink-faint);}
+  .user-card.open .chev{transform:rotate(180deg);}
+  .resi-list{display:none;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);}
+  .user-card.open .resi-list{display:block;}
+  .resi-chip-row{
+    display:flex;justify-content:space-between;align-items:center;font-size:11.8px;
+    padding:6px 4px;border-bottom:1px solid #f5eee8;
+  }
+  .resi-chip-row:last-child{border-bottom:none;}
+  .resi-chip-row .rid{font-family:'SFMono-Regular',Consolas,monospace;color:var(--ink-soft);}
+
+  footer{text-align:center;padding:30px 20px;color:var(--ink-faint);font-size:11.5px;}
+
+  @media(max-width:1100px){
+    .kpi-grid{grid-template-columns:repeat(2,1fr);}
+    .panel-row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">SPX</div>
+    <div class="brand-text">
+      <h1>Backlog Monitoring</h1>
+      <span>Stuck Order Tracking</span>
+    </div>
+  </div>
+  <div class="topbar-right" id="topbarRight" style="display:none;">
+    <span class="admin-badge">Admin Mode</span>
+    <span class="file-chip" id="fileChipWrap" style="display:none;"><span class="dot"></span><span class="fname" id="fileNameChip">-</span></span>
+    <button class="btn btn-ghost" id="refreshBtn">Update Data</button>
+  </div>
+</div>
+
+<!-- EMPTY STATE (dashboard belum ada data & bukan admin) -->
+<div class="empty-wrap" id="emptyState" style="display:none;">
+  <div class="empty-wrap-inner">
+    <div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <h2>Dashboard belum memiliki data</h2>
+    <p>Hubungi admin backlog monitoring untuk memperbarui data dari export FMS.</p>
+  </div>
+</div>
+
+<!-- ADMIN MODAL: upload / update data -->
+<div class="modal-overlay" id="adminModal">
+  <div class="upload-card" id="uploadCard">
+    <button class="modal-close" id="modalCloseBtn">✕</button>
+    <div class="upload-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0-12l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>Upload / Update File Export FMS</h2>
+    <p>Drag &amp; drop file <b>.xlsx</b> hasil export dari FMS, atau klik tombol di bawah.</p>
+    <button class="upload-btn" id="browseBtn">Pilih File .xlsx</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+    <div class="upload-hint">File diproses di browser, lalu datanya dikirim ke server supaya semua user bisa lihat.</div>
+    <div class="err-box" id="errBox"></div>
+    <div class="success-box" id="successBox">
+      <span id="successText">Data berhasil dimuat dari file.</span>
+    </div>
+    <div id="saveSection" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--line);text-align:left;">
+      <label style="font-size:11.5px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:6px;">Password Admin</label>
+      <input type="password" id="adminPassword" class="toolbar-input" style="width:100%;" placeholder="Masukkan password admin">
+      <button class="upload-btn" id="saveServerBtn" style="margin-top:12px;width:100%;">💾 Simpan ke Server</button>
+      <div id="saveStatus" style="font-size:12px;margin-top:8px;"></div>
+    </div>
+    <div class="upload-fields">
+      <b>Kolom yang dibutuhkan:</b> Shipment ID, Station Name, Zone ID/Name, Order Account, Inbound Time, LM Hub Aging, LM Hub Days, Delivery Attempts, No. Attempts, Latest Status, Latest Operation Time, Latest User Name, Destination Station.
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="container">
+
+
+    <div class="section-title"><h2>Ringkasan Backlog</h2><span class="sub">Overview stuck order saat ini</span></div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <div class="section-title"><h2>SLA &amp; Distribusi Aging</h2><span class="sub">Breakdown lama hari stuck</span></div>
+    <div class="panel-row">
+      <div class="panel">
+        <h3>Distribusi Umur Backlog (Hari)</h3>
+        <div class="panel-sub">Jumlah resi berdasarkan berapa hari sudah stuck</div>
+        <div class="hist-chart" id="histChart"></div>
+        <div class="hist-legend">
+          <span><span class="legend-dot" style="background:var(--green)"></span> 1–5 hari (normal)</span>
+          <span><span class="legend-dot" style="background:var(--amber)"></span> 6–10 hari (perlu perhatian)</span>
+          <span><span class="legend-dot" style="background:var(--red)"></span> &gt;10 hari (SLA warning / end state)</span>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Komposisi Latest Status</h3>
+        <div class="panel-sub">Status terakhir dari paket stuck</div>
+        <div class="donut-wrap">
+          <svg width="140" height="140" viewBox="0 0 140 140" id="donutSvg"></svg>
+          <div class="donut-legend" id="donutLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title"><h2>Ranking Last User</h2><span class="sub">User dengan resi stuck terbanyak di tangannya</span></div>
+    <div class="panel-row">
+      <div class="panel">
+        <h3>Top 10 Last User (jumlah resi)</h3>
+        <div class="panel-sub">Klik nama di tabel bawah untuk detail lengkap resi per-user</div>
+        <div id="userBarList"></div>
+      </div>
+      <div class="panel">
+        <h3>Top Zone Bermasalah</h3>
+        <div class="panel-sub">Zone dengan jumlah stuck order terbanyak</div>
+        <div id="zoneBarList"></div>
+      </div>
+    </div>
+
+    <div class="section-title"><h2>⚠ SLA Warning — Wajib End State</h2><span class="sub">Paket dengan umur &gt; 10 hari</span></div>
+    <div class="panel" style="padding-bottom:8px;">
+      <div class="table-toolbar">
+        <input class="toolbar-input" id="slaSearch" placeholder="Cari Shipment ID / User...">
+        <div class="toolbar-spacer"></div>
+        <span class="count-pill" id="slaCountPill">0 resi</span>
+      </div>
+      <div class="scroll-table">
+        <table>
+          <thead>
+            <tr>
+              <th data-key="shipmentId">Shipment ID</th>
+              <th data-key="zoneName">Zone</th>
+              <th data-key="lmHubDays">Umur (Hari)</th>
+              <th data-key="latestStatus">Latest Status</th>
+              <th data-key="attemptsNum">Attempts</th>
+              <th data-key="userName">Last User</th>
+              <th data-key="latestOpTime">Operasi Terakhir</th>
+              <th>Rekomendasi</th>
+            </tr>
+          </thead>
+          <tbody id="slaTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-title"><h2>Detail per Last User</h2><span class="sub">Semua resi yang dipegang tiap user</span></div>
+    <div class="panel">
+      <div class="table-toolbar">
+        <input class="toolbar-input" id="userSearch" placeholder="Cari nama user...">
+        <div class="toolbar-spacer"></div>
+        <span class="count-pill" id="userCountPill">0 user</span>
+      </div>
+      <div id="userCardList"></div>
+    </div>
+
+    <div class="section-title"><h2>Seluruh Data Backlog</h2><span class="sub">Tabel lengkap dengan filter mendalam</span></div>
+    <div class="panel">
+      <div class="table-toolbar">
+        <input class="toolbar-input" id="mainSearch" placeholder="Cari Shipment ID / User / Zone...">
+        <select class="toolbar-select" id="filterStatus"><option value="">Semua Status</option></select>
+        <select class="toolbar-select" id="filterZone"><option value="">Semua Zone</option></select>
+        <select class="toolbar-select" id="filterDay">
+          <option value="">Semua Umur</option>
+          <option value="1-5">1–5 hari</option>
+          <option value="6-10">6–10 hari</option>
+          <option value="10+">&gt;10 hari (SLA)</option>
+        </select>
+        <div class="toolbar-spacer"></div>
+        <span class="count-pill" id="mainCountPill">0 resi</span>
+        <button class="btn btn-outline" id="exportBtn">Export CSV</button>
+      </div>
+      <div class="scroll-table">
+        <table>
+          <thead>
+            <tr>
+              <th data-key="shipmentId">Shipment ID</th>
+              <th data-key="stationName">Station</th>
+              <th data-key="zoneName">Zone</th>
+              <th data-key="orderAccount">Account</th>
+              <th data-key="inboundTime">Inbound Time</th>
+              <th data-key="lmHubDays">Umur (Hari)</th>
+              <th data-key="attemptsNum">Attempts</th>
+              <th data-key="latestStatus">Latest Status</th>
+              <th data-key="latestOpTime">Operasi Terakhir</th>
+              <th data-key="userName">Last User</th>
+              <th data-key="destStation">Destination</th>
+            </tr>
+          </thead>
+          <tbody id="mainTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer>SPX Backlog Monitoring Dashboard · Data terakhir diperbarui: <span id="lastUpdatedFooter">-</span></footer>
+  </div>
+</div>
+
+<script>
+let records = [];
+let sortState = { main: {key:'lmHubDays', dir:'desc'}, sla: {key:'lmHubDays', dir:'desc'} };
+
+const SLA_LIMIT = 10;
+const isAdmin = new URLSearchParams(location.search).has('admin');
+let lastUpdatedAt = null;
+
+// ---------- Upload / modal handling ----------
+const uploadCard = document.getElementById('uploadCard');
+const fileInput = document.getElementById('fileInput');
+const browseBtn = document.getElementById('browseBtn');
+const errBox = document.getElementById('errBox');
+const successBox = document.getElementById('successBox');
+const successText = document.getElementById('successText');
+const refreshBtn = document.getElementById('refreshBtn');
+const adminModal = document.getElementById('adminModal');
+const modalCloseBtn = document.getElementById('modalCloseBtn');
+const saveSection = document.getElementById('saveSection');
+const saveServerBtn = document.getElementById('saveServerBtn');
+const saveStatus = document.getElementById('saveStatus');
+const adminPasswordInput = document.getElementById('adminPassword');
+
+let parsedButUnsaved = null; // records parsed from file, waiting to be saved to server
+let currentFileName = null;
+
+browseBtn.addEventListener('click', ()=>fileInput.click());
+fileInput.addEventListener('change', e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
+
+['dragenter','dragover'].forEach(evt=>{
+  uploadCard.addEventListener(evt, e=>{ e.preventDefault(); uploadCard.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(evt=>{
+  uploadCard.addEventListener(evt, e=>{ e.preventDefault(); uploadCard.classList.remove('drag'); });
+});
+uploadCard.addEventListener('drop', e=>{
+  const f = e.dataTransfer.files[0];
+  if(f) handleFile(f);
+});
+
+function openAdminModal(){ adminModal.classList.add('show'); }
+function closeAdminModal(){ adminModal.classList.remove('show'); }
+
+refreshBtn.addEventListener('click', openAdminModal);
+modalCloseBtn.addEventListener('click', closeAdminModal);
+adminModal.addEventListener('click', e=>{ if(e.target === adminModal) closeAdminModal(); });
+saveServerBtn.addEventListener('click', saveToServer);
+
+function showError(msg){
+  errBox.textContent = msg;
+  errBox.style.display='block';
+  successBox.style.display='none';
+  saveSection.style.display='none';
+}
+
+function handleFile(file){
+  errBox.style.display='none';
+  saveStatus.textContent='';
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array', cellDates:true});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, {defval:''});
+      const parsed = parseRows(json);
+      if(parsed.length === 0){
+        showError('File terbaca tapi tidak ada baris data yang valid. Cek kembali format kolom.');
+        return;
+      }
+      parsedButUnsaved = parsed;
+      currentFileName = file.name;
+      records = parsed;
+      document.getElementById('emptyState').style.display='none';
+      document.getElementById('dashboard').style.display='block';
+      successText.textContent = `File "${file.name}" berhasil dibaca — ${parsed.length} resi ditemukan. Masukkan password admin lalu simpan ke server supaya semua user melihat data ini.`;
+      successBox.style.display='block';
+      saveSection.style.display='block';
+      saveStatus.textContent='';
+      buildDashboard();
+    }catch(err){
+      console.error(err);
+      showError('Gagal membaca file: ' + err.message + '. Pastikan file adalah export FMS berformat .xlsx yang valid.');
+    }
+  };
+  reader.onerror = ()=> showError('Gagal membaca file.');
+  reader.readAsArrayBuffer(file);
+}
+
+// ---------- Server sync ----------
+function recordsToEmbeddable(recs){
+  return recs.map(r=>({
+    ...r,
+    inboundTime: r.inboundTime ? r.inboundTime.toISOString() : null,
+    latestOpTime: r.latestOpTime ? r.latestOpTime.toISOString() : null,
+  }));
+}
+function embeddableToRecords(arr){
+  return arr.map(r=>({
+    ...r,
+    inboundTime: r.inboundTime ? new Date(r.inboundTime) : null,
+    latestOpTime: r.latestOpTime ? new Date(r.latestOpTime) : null,
+  }));
+}
+
+async function saveToServer(){
+  if(!parsedButUnsaved){
+    saveStatus.style.color = 'var(--red)';
+    saveStatus.textContent = 'Belum ada file yang diupload.';
+    return;
+  }
+  const password = adminPasswordInput.value;
+  if(!password){
+    saveStatus.style.color = 'var(--red)';
+    saveStatus.textContent = 'Isi password admin dulu.';
+    return;
+  }
+  saveServerBtn.disabled = true;
+  saveServerBtn.textContent = 'Menyimpan...';
+  saveStatus.style.color = 'var(--ink-soft)';
+  saveStatus.textContent = 'Mengirim data ke server...';
+  try{
+    const res = await fetch('/api/upload', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        password,
+        fileName: currentFileName,
+        records: recordsToEmbeddable(parsedButUnsaved),
+      })
+    });
+    const json = await res.json();
+    if(!res.ok){
+      saveStatus.style.color = 'var(--red)';
+      saveStatus.textContent = json.error || 'Gagal menyimpan data.';
+      return;
+    }
+    saveStatus.style.color = 'var(--green)';
+    saveStatus.textContent = `Tersimpan! ${json.count} resi sekarang tampil untuk semua user.`;
+    lastUpdatedAt = json.updatedAt;
+    updateLastUpdatedFooter();
+    updateFileChip(currentFileName, json.updatedAt);
+    setTimeout(()=>{ closeAdminModal(); }, 1800);
+  }catch(err){
+    console.error(err);
+    saveStatus.style.color = 'var(--red)';
+    saveStatus.textContent = 'Gagal terhubung ke server. Cek koneksi lalu coba lagi.';
+  }finally{
+    saveServerBtn.disabled = false;
+    saveServerBtn.textContent = '💾 Simpan ke Server';
+  }
+}
+
+function updateLastUpdatedFooter(){
+  const el = document.getElementById('lastUpdatedFooter');
+  if(!el) return;
+  el.textContent = lastUpdatedAt ? fmtDate(new Date(lastUpdatedAt)) : '-';
+}
+
+function updateFileChip(fileName, updatedAt){
+  if(!isAdmin) return;
+  document.getElementById('fileNameChip').textContent = (fileName || 'data') + (updatedAt ? ' · ' + fmtDate(new Date(updatedAt)) : '');
+  document.getElementById('fileChipWrap').style.display='flex';
+}
+
+async function loadDataFromServer(){
+  if(isAdmin){
+    document.getElementById('topbarRight').style.display='flex';
+  }
+  try{
+    const res = await fetch('/api/data');
+    const json = await res.json();
+    const arr = json.records || [];
+    lastUpdatedAt = json.updatedAt || null;
+    updateLastUpdatedFooter();
+    if(arr.length > 0){
+      records = embeddableToRecords(arr);
+      document.getElementById('dashboard').style.display='block';
+      updateFileChip(json.fileName, json.updatedAt);
+      buildDashboard();
+    } else {
+      document.getElementById('dashboard').style.display='none';
+      if(isAdmin){
+        openAdminModal();
+      } else {
+        document.getElementById('emptyState').style.display='flex';
+      }
+    }
+  }catch(err){
+    console.error(err);
+    document.getElementById('dashboard').style.display='none';
+    if(isAdmin) openAdminModal();
+    else document.getElementById('emptyState').style.display='flex';
+  }
+}
+loadDataFromServer();
+
+// ---------- Parsing ----------
+function findKey(row, candidates){
+  const keys = Object.keys(row);
+  for(const c of candidates){
+    const hit = keys.find(k=>k.trim().toLowerCase() === c.toLowerCase());
+    if(hit) return hit;
+  }
+  for(const c of candidates){
+    const hit = keys.find(k=>k.trim().toLowerCase().includes(c.toLowerCase()));
+    if(hit) return hit;
+  }
+  return null;
+}
+
+function parseUser(raw){
+  if(!raw || typeof raw !== 'string') return {id:'', name:'(Tidak diketahui)', online:null};
+  let rest = raw.trim();
+  let id = '';
+  const idMatch = rest.match(/^\[(.*?)\]/);
+  if(idMatch){ id = idMatch[1]; rest = rest.slice(idMatch[0].length); }
+  let online = null;
+  const statusMatch = rest.match(/\[(online|offline)\]\s*$/i);
+  if(statusMatch){ online = statusMatch[1].toLowerCase()==='online'; rest = rest.slice(0, statusMatch.index); }
+  rest = rest.trim();
+  return {id, name: rest || raw, online};
+}
+
+function toDateSafe(v){
+  if(!v) return null;
+  if(v instanceof Date) return v;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function fmtDate(d){
+  if(!d) return '-';
+  const pad = n=> String(n).padStart(2,'0');
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function parseRows(json){
+  if(json.length === 0) return [];
+  const sample = json[0];
+  const kShipment = findKey(sample, ['shipment id','shipmentid','resi','tracking number']);
+  const kStation = findKey(sample, ['station name','station']);
+  const kZoneId = findKey(sample, ['zone id']);
+  const kZoneName = findKey(sample, ['zone name']);
+  const kAccount = findKey(sample, ['order account','account']);
+  const kInbound = findKey(sample, ['inbound time']);
+  const kAgingBucket = findKey(sample, ['lm hub aging','aging']);
+  const kDays = findKey(sample, ['lm hub days','days','aging days']);
+  const kAttemptsText = findKey(sample, ['delivery attempts']);
+  const kAttemptsNum = findKey(sample, ['no. attempts','no attempts','attempts']);
+  const kStatus = findKey(sample, ['latest status','status']);
+  const kOpTime = findKey(sample, ['latest operation time','operation time']);
+  const kUser = findKey(sample, ['latest user name','last user','user name']);
+  const kDest = findKey(sample, ['destination station','destination']);
+
+  const out = [];
+  json.forEach(row=>{
+    const shipmentId = kShipment ? String(row[kShipment]).trim() : '';
+    if(!shipmentId) return;
+    const days = kDays ? parseFloat(row[kDays]) : NaN;
+    const user = parseUser(kUser ? row[kUser] : '');
+    const inboundDate = kInbound ? toDateSafe(row[kInbound]) : null;
+    const opDate = kOpTime ? toDateSafe(row[kOpTime]) : null;
+    out.push({
+      shipmentId,
+      stationName: kStation ? String(row[kStation]||'-').trim() : '-',
+      zoneId: kZoneId ? String(row[kZoneId]||'-').trim() : '-',
+      zoneName: kZoneName ? String(row[kZoneName]||'-').trim() : (kZoneId ? String(row[kZoneId]||'-').trim() : '-'),
+      orderAccount: kAccount ? String(row[kAccount]||'-').trim() : '-',
+      inboundTime: inboundDate,
+      agingBucket: kAgingBucket ? String(row[kAgingBucket]||'-').trim() : '-',
+      lmHubDays: isNaN(days) ? 0 : days,
+      attemptsText: kAttemptsText ? String(row[kAttemptsText]||'-').trim() : '-',
+      attemptsNum: kAttemptsNum ? (parseInt(row[kAttemptsNum]) || 0) : 0,
+      latestStatus: kStatus ? String(row[kStatus]||'-').trim() : '-',
+      latestOpTime: opDate,
+      userRaw: kUser ? String(row[kUser]||'') : '',
+      userName: user.name,
+      userId: user.id,
+      userOnline: user.online,
+      destStation: kDest ? String(row[kDest]||'-').trim() : '-',
+    });
+  });
+  return out;
+}
+
+// ---------- Severity helpers ----------
+function severityOf(days){
+  if(days > SLA_LIMIT) return 'red';
+  if(days >= 6) return 'amber';
+  return 'green';
+}
+function severityLabel(days){
+  if(days > SLA_LIMIT) return 'SLA Breach';
+  if(days >= 6) return 'Perlu Perhatian';
+  return 'Normal';
+}
+
+// ---------- Build dashboard ----------
+function buildDashboard(){
+  buildKPI();
+  buildHistogram();
+  buildDonut();
+  buildUserBars();
+  buildZoneBars();
+  buildFilterOptions();
+  buildSLATable();
+  buildUserCards();
+  buildMainTable();
+  attachSortHandlers();
+  attachFilterHandlers();
+}
+
+function buildKPI(){
+  const total = records.length;
+  const slaCount = records.filter(r=>r.lmHubDays > SLA_LIMIT).length;
+  const avgDays = total ? (records.reduce((s,r)=>s+r.lmHubDays,0)/total) : 0;
+  const maxDays = total ? Math.max(...records.map(r=>r.lmHubDays)) : 0;
+  const uniqueUsers = new Set(records.map(r=>r.userName)).size;
+
+  const kpis = [
+    { label:'Total Stuck Order', value: total.toLocaleString('id-ID'), foot:'Seluruh paket dalam file backlog', accent:true,
+      icon:'<path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' },
+    { label:'SLA Warning (>10 hari)', value: slaCount.toLocaleString('id-ID'), foot: total? ((slaCount/total*100).toFixed(1)+'% dari total — wajib end state') : '0%', warn:true,
+      icon:'<path d="M12 8v5m0 3h.01M10.3 3.6L2.6 17a2 2 0 001.7 3h15.4a2 2 0 001.7-3L13.7 3.6a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
+    { label:'Rata-rata Umur', value: avgDays.toFixed(1)+' hr', foot:'Rata-rata semua paket stuck',
+      icon:'<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' },
+    { label:'Umur Tertinggi', value: maxDays.toFixed(1)+' hr', foot:'Paket paling lama stuck',
+      icon:'<path d="M12 2l2.4 7.2H22l-6 4.4 2.3 7.1L12 16.3l-6.3 4.4L8 13.6l-6-4.4h7.6z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' },
+    { label:'Jumlah Last User', value: uniqueUsers.toLocaleString('id-ID'), foot:'User unik yang memegang backlog',
+      icon:'<circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="2"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6M17 8a3 3 0 110 6M22 20c0-2.6-2-4.8-5-5.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' },
+  ];
+  const grid = document.getElementById('kpiGrid');
+  grid.innerHTML = kpis.map(k=>`
+    <div class="kpi ${k.accent?'accent':''} ${k.warn?'warn':''}">
+      <div class="kpi-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none">${k.icon}</svg></div>
+      <div class="label">${k.label}</div>
+      <div class="value">${k.value}</div>
+      <div class="foot">${k.foot}</div>
+    </div>
+  `).join('');
+}
+
+function buildHistogram(){
+  const buckets = {}; // key: '1'..'10','>10'
+  for(let i=1;i<=10;i++) buckets[i]=0;
+  buckets['>10']=0;
+  buckets['<1']=0;
+  records.forEach(r=>{
+    const d = r.lmHubDays;
+    let key;
+    if(d < 1) key = '<1';
+    else if(d > SLA_LIMIT) key = '>10';
+    else key = String(Math.floor(d) === 0 ? 1 : Math.min(Math.floor(d),10));
+    if(!(key in buckets)) buckets[key]=0;
+    buckets[key]++;
+  });
+  const order = ['<1','1','2','3','4','5','6','7','8','9','10','>10'];
+  const maxVal = Math.max(...order.map(k=>buckets[k]||0), 1);
+  const el = document.getElementById('histChart');
+  el.innerHTML = order.map(k=>{
+    const v = buckets[k]||0;
+    const h = Math.max((v/maxVal)*130, v>0?4:2);
+    let cls='green';
+    if(k==='>10') cls='red';
+    else if(['6','7','8','9','10'].includes(k)) cls='amber';
+    return `<div class="hist-bar-wrap">
+      <div class="hist-count">${v}</div>
+      <div class="hist-bar ${cls}" style="height:${h}px" title="${k} hari: ${v} resi"></div>
+      <div class="hist-label">${k==='<1'?'<1':k}</div>
+    </div>`;
+  }).join('');
+}
+
+function buildDonut(){
+  const counts = {};
+  records.forEach(r=>{ counts[r.latestStatus] = (counts[r.latestStatus]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const total = records.length || 1;
+  const palette = ['#ee4d1f','#f2a154','#c93d16','#8f2c11','#f7c99b','#d97757','#e8875f','#b8790a'];
+  let angleStart = 0;
+  const cx=70, cy=70, r=55, rInner=32;
+  let paths = '';
+  entries.forEach((e,i)=>{
+    const frac = e[1]/total;
+    const angleEnd = angleStart + frac*360;
+    paths += arcPath(cx,cy,r,angleStart,angleEnd, palette[i%palette.length]);
+    angleStart = angleEnd;
+  });
+  document.getElementById('donutSvg').innerHTML = paths + `<circle cx="${cx}" cy="${cy}" r="${rInner}" fill="#fff"/>
+    <text x="${cx}" y="${cy-3}" text-anchor="middle" font-family="Manrope" font-weight="800" font-size="18" fill="#241a15">${total}</text>
+    <text x="${cx}" y="${cy+13}" text-anchor="middle" font-family="Inter" font-size="9" fill="#a3948a">RESI</text>`;
+  document.getElementById('donutLegend').innerHTML = entries.map((e,i)=>`
+    <div class="donut-row">
+      <span class="sw" style="background:${palette[i%palette.length]}"></span>
+      <span class="nm">${e[0]}</span>
+      <span class="ct">${e[1]}</span>
+    </div>`).join('');
+}
+
+function arcPath(cx,cy,r,startAngle,endAngle,color){
+  const s = polar(cx,cy,r,endAngle);
+  const e = polar(cx,cy,r,startAngle);
+  const largeArc = endAngle-startAngle > 180 ? 1 : 0;
+  return `<path d="M${cx},${cy} L${s.x},${s.y} A${r},${r} 0 ${largeArc} 0 ${e.x},${e.y} Z" fill="${color}"/>`;
+}
+function polar(cx,cy,r,angleDeg){
+  const a = (angleDeg-90) * Math.PI/180;
+  return { x: cx + r*Math.cos(a), y: cy + r*Math.sin(a) };
+}
+
+function buildUserBars(){
+  const map = {};
+  records.forEach(r=>{ map[r.userName] = (map[r.userName]||0)+1; });
+  const arr = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const max = arr.length ? arr[0][1] : 1;
+  document.getElementById('userBarList').innerHTML = arr.map(([name,count])=>`
+    <div class="user-bar-row">
+      <div class="un" title="${name}">${name}</div>
+      <div class="user-bar-track"><div class="user-bar-fill" style="width:${(count/max*100)}%"></div></div>
+      <div class="ct">${count}</div>
+    </div>`).join('') || '<div class="empty-state">Tidak ada data</div>';
+}
+
+function buildZoneBars(){
+  const map = {};
+  records.forEach(r=>{ map[r.zoneName] = (map[r.zoneName]||0)+1; });
+  const arr = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const max = arr.length ? arr[0][1] : 1;
+  document.getElementById('zoneBarList').innerHTML = arr.map(([name,count])=>`
+    <div class="user-bar-row">
+      <div class="un" title="${name}">${name}</div>
+      <div class="user-bar-track"><div class="user-bar-fill" style="width:${(count/max*100)}%"></div></div>
+      <div class="ct">${count}</div>
+    </div>`).join('') || '<div class="empty-state">Tidak ada data</div>';
+}
+
+function buildFilterOptions(){
+  const statusSel = document.getElementById('filterStatus');
+  const zoneSel = document.getElementById('filterZone');
+  const statuses = [...new Set(records.map(r=>r.latestStatus))].sort();
+  const zones = [...new Set(records.map(r=>r.zoneName))].sort();
+  statusSel.innerHTML = '<option value="">Semua Status</option>' + statuses.map(s=>`<option value="${s}">${s}</option>`).join('');
+  zoneSel.innerHTML = '<option value="">Semua Zone</option>' + zones.map(z=>`<option value="${z}">${z}</option>`).join('');
+}
+
+function dayTagHtml(days){
+  const sev = severityOf(days);
+  return `<span class="day-tag ${sev}">${days.toFixed(2)}</span>`;
+}
+function badgeHtml(days){
+  const sev = severityOf(days);
+  const cls = sev==='red'?'badge-red':(sev==='amber'?'badge-amber':'badge-green');
+  return `<span class="badge ${cls}">${severityLabel(days)}</span>`;
+}
+
+function buildSLATable(){
+  let data = records.filter(r=>r.lmHubDays > SLA_LIMIT);
+  const search = (document.getElementById('slaSearch').value||'').toLowerCase();
+  if(search){
+    data = data.filter(r=> r.shipmentId.toLowerCase().includes(search) || r.userName.toLowerCase().includes(search));
+  }
+  data = sortData(data, sortState.sla);
+  document.getElementById('slaCountPill').textContent = data.length + ' resi';
+  const body = document.getElementById('slaTableBody');
+  if(data.length===0){
+    body.innerHTML = `<tr><td colspan="8"><div class="empty-state">Tidak ada paket melebihi ${SLA_LIMIT} hari 🎉</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = data.map(r=>`
+    <tr class="sla-row">
+      <td class="mono">${r.shipmentId}</td>
+      <td>${r.zoneName}</td>
+      <td>${dayTagHtml(r.lmHubDays)}</td>
+      <td><span class="badge badge-status">${r.latestStatus}</span></td>
+      <td>${r.attemptsText}</td>
+      <td>${r.userName}</td>
+      <td>${fmtDate(r.latestOpTime)}</td>
+      <td><span class="badge badge-red">End State</span></td>
+    </tr>`).join('');
+}
+
+function buildUserCards(){
+  const map = {};
+  records.forEach(r=>{
+    if(!map[r.userName]) map[r.userName] = { name:r.userName, id:r.userId, online:r.userOnline, items:[] };
+    map[r.userName].items.push(r);
+  });
+  let arr = Object.values(map);
+  const search = (document.getElementById('userSearch').value||'').toLowerCase();
+  if(search) arr = arr.filter(u=>u.name.toLowerCase().includes(search));
+  arr.sort((a,b)=>b.items.length - a.items.length);
+  document.getElementById('userCountPill').textContent = arr.length + ' user';
+
+  const el = document.getElementById('userCardList');
+  if(arr.length===0){ el.innerHTML = '<div class="empty-state">Tidak ada user ditemukan</div>'; return; }
+
+  el.innerHTML = arr.map((u,idx)=>{
+    const days = u.items.map(i=>i.lmHubDays);
+    const avg = days.reduce((s,d)=>s+d,0)/days.length;
+    const max = Math.max(...days);
+    const slaCount = u.items.filter(i=>i.lmHubDays>SLA_LIMIT).length;
+    const initials = u.name.split(' ').filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase() || '?';
+    const sortedItems = [...u.items].sort((a,b)=>b.lmHubDays-a.lmHubDays);
+    return `
+    <div class="user-card" id="ucard-${idx}">
+      <div class="user-card-head" onclick="toggleUserCard(${idx})">
+        <div class="uid">${initials}</div>
+        <div class="info">
+          <div class="nm">${u.name}${u.id?` <span style="color:var(--ink-faint);font-weight:500;">(${u.id})</span>`:''}</div>
+          <div class="meta">${u.online===true?'🟢 online':u.online===false?'⚪ offline':''} · ${u.items.length} resi dipegang</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="n">${avg.toFixed(1)}</div><div class="l">avg hari</div></div>
+          <div class="stat"><div class="n">${max.toFixed(1)}</div><div class="l">max hari</div></div>
+          <div class="stat"><div class="n" style="color:${slaCount>0?'var(--red)':'var(--ink)'}">${slaCount}</div><div class="l">sla warn</div></div>
+        </div>
+        <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="resi-list">
+        ${sortedItems.map(i=>`
+          <div class="resi-chip-row">
+            <span class="rid">${i.shipmentId}</span>
+            <span style="color:var(--ink-faint)">${i.zoneName}</span>
+            <span><span class="badge badge-status">${i.latestStatus}</span></span>
+            ${dayTagHtml(i.lmHubDays)} hari
+            ${badgeHtml(i.lmHubDays)}
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleUserCard(idx){
+  document.getElementById('ucard-'+idx).classList.toggle('open');
+}
+
+function sortData(data, state){
+  const {key, dir} = state;
+  return [...data].sort((a,b)=>{
+    let va = a[key], vb = b[key];
+    if(va instanceof Date) va = va ? va.getTime() : 0;
+    if(vb instanceof Date) vb = vb ? vb.getTime() : 0;
+    if(typeof va === 'string') va = va.toLowerCase();
+    if(typeof vb === 'string') vb = vb.toLowerCase();
+    if(va < vb) return dir==='asc' ? -1 : 1;
+    if(va > vb) return dir==='asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+function buildMainTable(){
+  let data = [...records];
+  const search = (document.getElementById('mainSearch').value||'').toLowerCase();
+  const fStatus = document.getElementById('filterStatus').value;
+  const fZone = document.getElementById('filterZone').value;
+  const fDay = document.getElementById('filterDay').value;
+
+  if(search){
+    data = data.filter(r =>
+      r.shipmentId.toLowerCase().includes(search) ||
+      r.userName.toLowerCase().includes(search) ||
+      r.zoneName.toLowerCase().includes(search)
+    );
+  }
+  if(fStatus) data = data.filter(r=>r.latestStatus===fStatus);
+  if(fZone) data = data.filter(r=>r.zoneName===fZone);
+  if(fDay==='1-5') data = data.filter(r=>r.lmHubDays<=5);
+  else if(fDay==='6-10') data = data.filter(r=>r.lmHubDays>5 && r.lmHubDays<=10);
+  else if(fDay==='10+') data = data.filter(r=>r.lmHubDays>10);
+
+  data = sortData(data, sortState.main);
+  document.getElementById('mainCountPill').textContent = data.length + ' resi';
+
+  const body = document.getElementById('mainTableBody');
+  if(data.length===0){
+    body.innerHTML = `<tr><td colspan="11"><div class="empty-state">Tidak ada data yang cocok dengan filter</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = data.map(r=>`
+    <tr class="${r.lmHubDays>SLA_LIMIT?'sla-row':''}">
+      <td class="mono">${r.shipmentId}</td>
+      <td>${r.stationName}</td>
+      <td>${r.zoneName}</td>
+      <td>${r.orderAccount}</td>
+      <td>${fmtDate(r.inboundTime)}</td>
+      <td>${dayTagHtml(r.lmHubDays)}</td>
+      <td>${r.attemptsText}</td>
+      <td><span class="badge badge-status">${r.latestStatus}</span></td>
+      <td>${fmtDate(r.latestOpTime)}</td>
+      <td>${r.userName}</td>
+      <td>${r.destStation}</td>
+    </tr>`).join('');
+  window._filteredMain = data;
+}
+
+function attachSortHandlers(){
+  document.querySelectorAll('#dashboard table thead').forEach(thead=>{
+    const isSla = thead.closest('table').querySelector('#slaTableBody') !== null;
+    const stateKey = isSla ? 'sla' : 'main';
+    thead.querySelectorAll('th[data-key]').forEach(th=>{
+      th.addEventListener('click', ()=>{
+        const key = th.dataset.key;
+        const st = sortState[stateKey];
+        if(st.key===key) st.dir = st.dir==='asc'?'desc':'asc';
+        else { st.key = key; st.dir = 'desc'; }
+        if(isSla) buildSLATable(); else buildMainTable();
+      });
+    });
+  });
+}
+
+function attachFilterHandlers(){
+  document.getElementById('slaSearch').addEventListener('input', buildSLATable);
+  document.getElementById('userSearch').addEventListener('input', buildUserCards);
+  document.getElementById('mainSearch').addEventListener('input', buildMainTable);
+  document.getElementById('filterStatus').addEventListener('change', buildMainTable);
+  document.getElementById('filterZone').addEventListener('change', buildMainTable);
+  document.getElementById('filterDay').addEventListener('change', buildMainTable);
+  document.getElementById('exportBtn').addEventListener('click', exportCSV);
+}
+
+function exportCSV(){
+  const data = window._filteredMain || records;
+  const headers = ['Shipment ID','Station','Zone','Account','Inbound Time','Umur (Hari)','Attempts','Latest Status','Operasi Terakhir','Last User','Destination'];
+  const rows = data.map(r=>[
+    r.shipmentId, r.stationName, r.zoneName, r.orderAccount, fmtDate(r.inboundTime),
+    r.lmHubDays.toFixed(2), r.attemptsText, r.latestStatus, fmtDate(r.latestOpTime), r.userName, r.destStation
+  ]);
+  let csv = headers.join(',') + '\n' + rows.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'backlog_filtered_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
