@@ -49,3 +49,5 @@ npm install
 ADMIN_PASSWORD=test123 npm start
 ```
 Buka `http://localhost:3000`
+
+<!-- trigger redeploy -->
